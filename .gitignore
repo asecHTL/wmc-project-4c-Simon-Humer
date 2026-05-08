@@ -1,0 +1,72 @@
+# =========================
+# Node.js & JavaScript
+# =========================
+
+# Dependencies
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Coverage and Testing
+coverage/
+.nyc_output/
+
+# Environment Variables (WICHTIG: Niemals sensible Daten committen!)
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Caches
+.npm
+.eslintcache
+.stylelintcache
+
+# =========================
+# Svelte, SvelteKit & Vite
+# =========================
+
+# SvelteKit Build- und generierte Dateien
+.svelte-kit/
+build/
+package/
+
+# Vite Cache und Timestamps
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# =========================
+# OS & Editor Files
+# =========================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs (VS Code, WebStorm etc.)
+.idea/
+.vscode/*
+# Diese Dateien aus VS Code willst du vielleicht im Team teilen (optional einkommentieren):
+#!.vscode/settings.json
+#!.vscode/tasks.json
+#!.vscode/launch.json
+#!.vscode/extensions.json
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
