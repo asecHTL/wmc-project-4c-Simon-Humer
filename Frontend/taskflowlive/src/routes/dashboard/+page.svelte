@@ -1,65 +1,224 @@
 <script>
     let { data } = $props();
+
+    const statusMeta = {
+        Done:       { icon: '✓', color: '#5bc4a0', bg: '#e0f5ed', label: 'Task completed' },
+        InProgress: { icon: '🕐', color: '#e6b84a', bg: '#fdf3d7', label: 'In Progress' },
+        OnHold:     { icon: '⊠', color: '#e8924a', bg: '#fdebd7', label: 'On hold' },
+        Overdue:    { icon: '⊖', color: '#a07eda', bg: '#ede5f8', label: 'Overdue' },
+    };
+
+    const priorityColors = {
+        High:   '#e05c5c',
+        Medium: '#e6b84a',
+        Low:    '#5bc4a0',
+    };
 </script>
 
-<h1>Dashboard</h1>
+<div class="dashboard">
+    <h1>Dashboard</h1>
 
-<div class="card">
-    <div class="tasksNext">
-        <ul>
-            {#each data.upComingTasks as task}
-                <li>{task.taskTitle}</li>
-            {:else}
-                <li>Keine Tasks gefunden.</li>
-            {/each}
-        </ul>
-    </div>
-</div>
+    <div class="grid">
 
-<div class="card">
-    <div class="overviewTasks">
-        <table>
-            <thead>
-                <tr>
-                    <th>Priorität</th>
-                    <th>Counter</th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each data.overviewPersonalTasks as singleTaskOverview}
-                    <tr>
-                        <td>{singleTaskOverview.status}</td>
-                        <td>{singleTaskOverview.count}</td>
-                    </tr>
+        <!-- Up Next -->
+        <div class="card">
+            <h2>Up Next</h2>
+            <ul class="task-list">
+                {#each data.upComingTasks as task}
+                    <li class="task-item">
+                        <span class="task-icon">📅</span>
+                        <span>{task.taskTitle}</span>
+                    </li>
+                {:else}
+                    <li class="task-item muted">Keine Tasks gefunden.</li>
                 {/each}
-            </tbody>
-        </table>
-    </div>
-</div>
+            </ul>
+        </div>
 
-<div class="card">
-    <div class="tasksPriority">
-        <table>
-            <thead>
-                <tr>
-                    <th>Priorität</th>
-                    <th>Counter</th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each data.tasksByPriority as taskPriority}
-                    <tr>
-                        <td>{taskPriority.status}</td>
-                        <td>{taskPriority.count}</td>
-                    </tr>
+        <!-- Overview -->
+        <div class="card">
+            <h2>Overview</h2>
+            <div class="overview-grid">
+                {#each data.overviewPersonalTasks as item}
+                    {@const meta = statusMeta[item.status] ?? { icon: '?', color: '#888', bg: '#eee', label: item.status }}
+                    <div class="overview-item">
+                        <div class="overview-icon" style="background:{meta.bg}; color:{meta.color}">
+                            {meta.icon}
+                        </div>
+                        <div class="overview-count">{item.count}</div>
+                        <div class="overview-label">{meta.label}</div>
+                    </div>
                 {/each}
-            </tbody>
-        </table>
+            </div>
+        </div>
+
+        <!-- Tasks by Priority -->
+        <div class="card">
+            <h2>Tasks by Priority</h2>
+            <ul class="priority-list">
+                {#each data.tasksByPriority as t}
+                    <li class="priority-item">
+                        <span class="priority-dot" style="background:{priorityColors[t.status] ?? '#ccc'}"></span>
+                        <span class="priority-label">{t.status}</span>
+                        <span class="priority-count">{t.count}</span>
+                    </li>
+                {/each}
+            </ul>
+        </div>
+
+        <!-- Tasks Progress placeholder -->
+        <div class="card">
+            <h2>Tasks Progress</h2>
+            <div class="placeholder">Diagramm folgt...</div>
+        </div>
+
     </div>
 </div>
 
-<div class="card">
-    <div class="tasksProgressDiagramm"></div>
-</div>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
 
+    .dashboard {
+        font-family: 'DM Sans', sans-serif;
+        background: #f0f2f7;
+        min-height: 100vh;
+        padding: 2rem;
+        color: #1a1a2e;
+    }
 
+    h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 0 0 2rem;
+    }
+
+    h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 1.25rem;
+        color: #1a1a2e;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1.25rem;
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    /* Up Next */
+    .task-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .task-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.95rem;
+        color: #374151;
+    }
+
+    .task-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: #f0f0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .muted { color: #9ca3af; }
+
+    /* Overview */
+    .overview-grid {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .overview-item {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+    }
+
+    .overview-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .overview-count {
+        font-size: 1.4rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    .overview-label {
+        font-size: 0.78rem;
+        color: #9ca3af;
+    }
+
+    /* Priority list */
+    .priority-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .priority-item {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .priority-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .priority-label {
+        flex: 1;
+        color: #374151;
+    }
+
+    .priority-count {
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+
+    /* Placeholder */
+    .placeholder {
+        color: #9ca3af;
+        font-size: 0.9rem;
+        padding: 2rem 0;
+        text-align: center;
+    }
+</style>
