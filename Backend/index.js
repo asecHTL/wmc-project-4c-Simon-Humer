@@ -149,7 +149,7 @@ app.post('/user/login', async (req, res) => {
     }
 });
 
-app.get('/dashboard/personalNextTasks{/:userId}',async (req, res) => {
+app.get('/dashboard/personalNextTasks{/:userId}', async (req, res) => {
     const { userId } = req.params || {};
     const tasks = await db.all('Select * from Tasks where fkUserId = ? LIMIT 3', [userId]);
     if (tasks === null) {
@@ -162,19 +162,21 @@ app.get('/dashboard/personalNextTasks{/:userId}',async (req, res) => {
 
 app.get('/dashboard/overviewPersonalTasks{/:userId}', async (req, res) => {
     try {
-        const { userId } = req.params; 
-        
+        const { userId } = req.params;
+
         const tasks = await db.all('Select * from Tasks where fkUserId = ?', [userId]) || [];
 
-        const statusOverview = tasks.reduce((acc, task) => {
-            const status = task.taskStatus;
-            
-            if (['Done', 'InProgress', 'OnHold', 'Overdue'].includes(status)) {
-                acc[status] = (acc[status] || 0) + 1;
-            }
-            
-            return acc;
-        }, { Done: 0, InProgress: 0, OnHold: 0, Overdue: 0 }); 
+        const statusOverview = [
+            { status: 'Done', count: 0 },
+            { status: 'InProgress', count: 0 },
+            { status: 'OnHold', count: 0 },
+            { status: 'Overdue', count: 0 },
+        ];
+
+        tasks.forEach(task => {
+            const entry = statusOverview.find(s => s.status === task.taskStatus);
+            if (entry) entry.count++;
+        });
 
         res.json(statusOverview);
 
@@ -186,21 +188,25 @@ app.get('/dashboard/overviewPersonalTasks{/:userId}', async (req, res) => {
 
 app.get('/dashboard/tasksByPriority{/:userId}', async (req, res) => {
     try {
-        const { userId } = req.params; 
-        
+        const { userId } = req.params;
+
         const tasks = await db.all('Select * from Tasks where fkUserId = ?', [userId]) || [];
 
-        const taskPriority = tasks.reduce((acc, task) => {
-            const priority = task.taskPriority;
-            
-            if (['High', 'Medium', 'Low'].includes(priority)) {
-                acc[priority] = (acc[priority] || 0) + 1;
-            }
-            
-            return acc;
-        }, { High: 0, Medium: 0, Low: 0 }); 
+        const taskOverviewPriority = [
+            { status: 'High', count: 0 },
+            { status: 'Medium', count: 0 },
+            { status: 'Low', count: 0 },
+        ];
 
-        res.json(taskPriority);
+        tasks.forEach(task => {
+            const entry = taskOverviewPriority.find(s => s.status === task.taskPriority);
+            if (entry) entry.count++;
+
+            console.log(entry);
+        });
+
+
+        res.json(taskOverviewPriority);
 
     } catch (error) {
         res.status(500).json({ error: 'Datenbankfehler', details: error.message });

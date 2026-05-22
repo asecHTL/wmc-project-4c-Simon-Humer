@@ -11,4 +11,7 @@ export async function  load({url}) {
 const [upComingTasks, overviewPersonalTasks, tasksByPriority] = await Promise.all([
     res1.json(), res2.json(), res3.json()
 ]);
+
+    return { upComingTasks, overviewPersonalTasks, tasksByPriority };
+
 }
