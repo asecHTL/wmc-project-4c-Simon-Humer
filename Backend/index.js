@@ -43,6 +43,7 @@ await db.exec(`
         taskDescription TEXT NOT NULL,
         taskPriority TEXT NOT NULL,
         taskEndDate DATE NOT NULL,
+        taskStatus Text not null,
         fkUserId INTEGER NOT NULL,
         FOREIGN KEY (fkUserId) REFERENCES Users(userId)
     )
@@ -73,7 +74,6 @@ const port = 3000;
 
 app.use(cors());
 
-// Global logger to see what's coming in
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     console.log('Headers:', JSON.stringify(req.headers, null, 2));
@@ -117,8 +117,7 @@ app.post('/user/login', async (req, res) => {
     console.log('URL:', req.url);
     console.log('Headers:', JSON.stringify(req.headers, null, 2));
     console.log('Body:', req.body);
-    
-    // Check if body is empty but there might be raw data
+
     if (!req.body || Object.keys(req.body).length === 0) {
         console.warn('Warning: Request body is empty.');
     }
@@ -149,6 +148,67 @@ app.post('/user/login', async (req, res) => {
         return res.status(500).send('Internal Server Error');
     }
 });
+
+app.get('/dashboard/personalNextTasks{/:userId}', (req, res) => {
+    const { userId } = req.body || {};
+    const tasks = await db.get('Select * from Tasks where fkUserId = ? LIMIT 3', [userId]);
+    if (tasks === null) {
+        return res.status(401).send('No tasks for the given user');
+    } else {
+        return res.json(tasks);
+    }
+
+});
+
+app.get('/dashboard/overviewPersonalTasks{/:userId}', async (req, res) => {
+    try {
+        const { userId } = req.params; 
+        
+        const tasks = await db.get('Select * from Tasks where fkUserId = ?', [userId]) || [];
+
+        const statusOverview = tasks.reduce((acc, task) => {
+            const status = task.taskStatus;
+            
+            if (['Done', 'InProgress', 'OnHold', 'Overdue'].includes(status)) {
+                acc[status] = (acc[status] || 0) + 1;
+            }
+            
+            return acc;
+        }, { Done: 0, InProgress: 0, OnHold: 0, Overdue: 0 }); 
+
+        res.json(statusOverview);
+
+    } catch (error) {
+        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+    }
+});
+
+
+app.get('/dashboard/tasksByPriority{/:userId}', async (req, res) => {
+    try {
+        const { userId } = req.params; 
+        
+        const tasks = await db.get('Select * from Tasks where fkUserId = ?', [userId]) || [];
+
+        const taskPriority = tasks.reduce((acc, task) => {
+            const priority = task.taskPriority;
+            
+            if (['High', 'Medium', 'Low'].includes(priority)) {
+                acc[priority] = (acc[priority] || 0) + 1;
+            }
+            
+            return acc;
+        }, { Done: 0, InProgress: 0, OnHold: 0, Overdue: 0 }); 
+
+        res.json(taskPriority);
+
+    } catch (error) {
+        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+    }
+});
+
+
+
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
