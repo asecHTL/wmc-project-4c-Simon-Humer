@@ -6,6 +6,8 @@
     let errorMessage = $state('');
     let isLoading = $state(false);
 
+    import { userData } from '$lib/shared/User.svelte';
+
     async function handleLogin(event) {
         event.preventDefault();
         errorMessage = '';
@@ -30,9 +32,10 @@
                 const user = await response.json();
                 console.log('Login erfolgreich:', user);
                 
-                localStorage.setItem('user', JSON.stringify(user));
+                userData.userId = user.userId
+
                 
-                goto('../dashboard');
+                goto(`../dashboard?userId=${userData.userId}`);
             } else {
                 const errorText = await response.text();
                 errorMessage = errorText || 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Daten.';
@@ -46,7 +49,7 @@
     }
 </script>
 
-//Error handeling wurde im nachhinein mit KI gemacht 
+ 
 
 
 <div class="login-container">
