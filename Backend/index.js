@@ -44,6 +44,7 @@ await db.exec(`
         taskPriority TEXT NOT NULL,
         taskEndDate DATE NOT NULL,
         taskStatus Text not null,
+        taskClosed Date,
         fkUserId INTEGER NOT NULL,
         FOREIGN KEY (fkUserId) REFERENCES Users(userId)
     )
@@ -213,7 +214,31 @@ app.get('/dashboard/tasksByPriority{/:userId}', async (req, res) => {
     }
 });
 
+app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
 
+     
+        const query = `
+            SELECT taskClosed AS date, COUNT(*) AS count 
+            FROM Tasks 
+            WHERE fkUserId = ? 
+              AND taskStatus = 'Done' 
+              AND taskClosed IS NOT NULL
+            GROUP BY taskClosed
+            ORDER BY taskClosed ASC
+        `;
+
+        const tasksStatistic = await db.all(query, [userId]) || [];
+
+     
+
+        res.json(tasksStatistic);
+
+    } catch (error) {
+        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+    }
+});
 
 
 app.listen(port, () => {

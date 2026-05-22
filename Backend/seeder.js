@@ -15,7 +15,7 @@ const db = await open({
 // ── Users ────────────────────────────────────────────────────────────────────
 
 const rawUsers = [
-    { username: 'maxmuster',   email: 'max.muster@example.com',    password: 'Password1!', firstname: 'Max',      lastname: 'Mustermann', birthday: '1990-04-12' },
+    { username: 'maxmuster',   email: 'max.muster@example.com',   password: 'Password1!', firstname: 'Max',      lastname: 'Mustermann', birthday: '1990-04-12' },
     { username: 'annaschmidt', email: 'anna.schmidt@example.com',  password: 'Password2!', firstname: 'Anna',     lastname: 'Schmidt',    birthday: '1993-07-23' },
     { username: 'lukashuber',  email: 'lukas.huber@example.com',   password: 'Password3!', firstname: 'Lukas',    lastname: 'Huber',      birthday: '1988-11-05' },
     { username: 'sofieweber',  email: 'sofie.weber@example.com',   password: 'Password4!', firstname: 'Sofie',    lastname: 'Weber',      birthday: '1995-02-18' },
@@ -42,14 +42,14 @@ console.log(`   ✓ ${userIds.length} Users`);
 // ── Projects ─────────────────────────────────────────────────────────────────
 
 const projects = [
-    { projectName: 'Website Relaunch',        projectPriority: 'High',   projectEndDate: '2025-06-30' },
-    { projectName: 'Mobile App v2',           projectPriority: 'High',   projectEndDate: '2025-08-15' },
-    { projectName: 'CRM Integration',         projectPriority: 'Medium', projectEndDate: '2025-07-01' },
-    { projectName: 'Internal HR Portal',      projectPriority: 'Low',    projectEndDate: '2025-10-01' },
-    { projectName: 'Data Analytics Dashboard',projectPriority: 'High',   projectEndDate: '2025-05-20' },
-    { projectName: 'API Gateway Refactor',    projectPriority: 'Medium', projectEndDate: '2025-09-10' },
-    { projectName: 'Customer Onboarding Flow',projectPriority: 'Medium', projectEndDate: '2025-07-25' },
-    { projectName: 'Security Audit 2025',     projectPriority: 'High',   projectEndDate: '2025-06-01' },
+    { projectName: 'Website Relaunch',         projectPriority: 'High',   projectEndDate: '2025-06-30' },
+    { projectName: 'Mobile App v2',            projectPriority: 'High',   projectEndDate: '2025-08-15' },
+    { projectName: 'CRM Integration',          projectPriority: 'Medium', projectEndDate: '2025-07-01' },
+    { projectName: 'Internal HR Portal',       projectPriority: 'Low',    projectEndDate: '2025-10-01' },
+    { projectName: 'Data Analytics Dashboard', projectPriority: 'High',   projectEndDate: '2025-05-20' },
+    { projectName: 'API Gateway Refactor',     projectPriority: 'Medium', projectEndDate: '2025-09-10' },
+    { projectName: 'Customer Onboarding Flow', projectPriority: 'Medium', projectEndDate: '2025-07-25' },
+    { projectName: 'Security Audit 2025',      projectPriority: 'High',   projectEndDate: '2025-06-01' },
 ];
 
 console.log('🌱 Seeding Projects...');
@@ -88,11 +88,24 @@ const taskTemplates = [
 console.log('🌱 Seeding Tasks...');
 const taskIds = [];
 for (const u of userIds) {
+    // Ein Starttag für die erledigten Tasks dieses Nutzers (z.B. ab dem 01. Mai 2025)
+    let doneTaskDayCounter = 1;
+
     for (const t of taskTemplates) {
+        let taskClosedValue = null;
+
+        // Wenn der Task erledigt ist, verpassen wir ihm ein ansteigendes Datum
+        if (t.taskStatus === 'Done') {
+            // Generiert z.B. '2025-05-01', beim nächsten erledigten Task '2025-05-02' usw.
+            const dayString = String(doneTaskDayCounter).padStart(2, '0');
+            taskClosedValue = `2025-05-${dayString}`;
+            doneTaskDayCounter++; 
+        }
+
         const result = await db.run(
-            `INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [t.taskTitle, t.taskDescription, t.taskPriority, t.taskEndDate, t.taskStatus, u]
+            `INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, taskClosed, fkUserId)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [t.taskTitle, t.taskDescription, t.taskPriority, t.taskEndDate, t.taskStatus, taskClosedValue, u]
         );
         taskIds.push(result.lastID);
     }
@@ -104,7 +117,6 @@ console.log(`   ✓ ${taskIds.length} Tasks (${taskTemplates.length} per user)`)
 console.log('🌱 Seeding ProjectUserTable...');
 let puCount = 0;
 for (let i = 0; i < projectIds.length; i++) {
-    // Each project gets 2–4 users assigned
     const assigned = userIds.slice(0, (i % 4) + 2);
     for (const uid of assigned) {
         await db.run(
@@ -121,7 +133,6 @@ console.log(`   ✓ ${puCount} ProjectUser assignments`);
 console.log('🌱 Seeding ProjectTasksTable...');
 let ptCount = 0;
 for (let i = 0; i < projectIds.length; i++) {
-    // Assign ~6 tasks per project (round-robin from taskIds)
     const start = (i * 6) % taskIds.length;
     for (let j = 0; j < 6; j++) {
         const tid = taskIds[(start + j) % taskIds.length];
