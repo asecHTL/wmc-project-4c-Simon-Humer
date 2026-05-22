@@ -149,9 +149,9 @@ app.post('/user/login', async (req, res) => {
     }
 });
 
-app.get('/dashboard/personalNextTasks{/:userId}', (req, res) => {
-    const { userId } = req.body || {};
-    const tasks = await db.get('Select * from Tasks where fkUserId = ? LIMIT 3', [userId]);
+app.get('/dashboard/personalNextTasks{/:userId}',async (req, res) => {
+    const { userId } = req.params || {};
+    const tasks = await db.all('Select * from Tasks where fkUserId = ? LIMIT 3', [userId]);
     if (tasks === null) {
         return res.status(401).send('No tasks for the given user');
     } else {
@@ -164,7 +164,7 @@ app.get('/dashboard/overviewPersonalTasks{/:userId}', async (req, res) => {
     try {
         const { userId } = req.params; 
         
-        const tasks = await db.get('Select * from Tasks where fkUserId = ?', [userId]) || [];
+        const tasks = await db.all('Select * from Tasks where fkUserId = ?', [userId]) || [];
 
         const statusOverview = tasks.reduce((acc, task) => {
             const status = task.taskStatus;
@@ -188,7 +188,7 @@ app.get('/dashboard/tasksByPriority{/:userId}', async (req, res) => {
     try {
         const { userId } = req.params; 
         
-        const tasks = await db.get('Select * from Tasks where fkUserId = ?', [userId]) || [];
+        const tasks = await db.all('Select * from Tasks where fkUserId = ?', [userId]) || [];
 
         const taskPriority = tasks.reduce((acc, task) => {
             const priority = task.taskPriority;
@@ -198,7 +198,7 @@ app.get('/dashboard/tasksByPriority{/:userId}', async (req, res) => {
             }
             
             return acc;
-        }, { Done: 0, InProgress: 0, OnHold: 0, Overdue: 0 }); 
+        }, { High: 0, Medium: 0, Low: 0 }); 
 
         res.json(taskPriority);
 

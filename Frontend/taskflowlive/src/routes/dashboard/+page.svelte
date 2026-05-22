@@ -1,1 +1,5 @@
-<h1>Willkommen</h1>
+<script>
+    let {data} = $props();
+</script>
+<h1>Dashboard</h1>
+
