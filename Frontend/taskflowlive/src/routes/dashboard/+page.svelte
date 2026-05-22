@@ -1,25 +1,109 @@
 <script>
+    import { onMount } from "svelte";
+    import Chart from "chart.js/auto";
+
     let { data } = $props();
 
     const statusMeta = {
-        Done:       { icon: '✓', color: '#5bc4a0', bg: '#e0f5ed', label: 'Task completed' },
-        InProgress: { icon: '🕐', color: '#e6b84a', bg: '#fdf3d7', label: 'In Progress' },
-        OnHold:     { icon: '⊠', color: '#e8924a', bg: '#fdebd7', label: 'On hold' },
-        Overdue:    { icon: '⊖', color: '#a07eda', bg: '#ede5f8', label: 'Overdue' },
+        Done: {
+            icon: "✓",
+            color: "#5bc4a0",
+            bg: "#e0f5ed",
+            label: "Task completed",
+        },
+        InProgress: {
+            icon: "🕐",
+            color: "#e6b84a",
+            bg: "#fdf3d7",
+            label: "In Progress",
+        },
+        OnHold: {
+            icon: "⊠",
+            color: "#e8924a",
+            bg: "#fdebd7",
+            label: "On hold",
+        },
+        Overdue: {
+            icon: "⊖",
+            color: "#a07eda",
+            bg: "#ede5f8",
+            label: "Overdue",
+        },
     };
 
     const priorityColors = {
-        High:   '#e05c5c',
-        Medium: '#e6b84a',
-        Low:    '#5bc4a0',
+        High: "#e05c5c",
+        Medium: "#e6b84a",
+        Low: "#5bc4a0",
     };
+
+    let canvas = $state(null);
+    let chart = null;
+
+ 
+    let chartLabels = $derived(data.tasksByPriority.map((t) => t.status));
+    let chartValues = $derived(data.tasksByPriority.map((t) => t.count));
+    let chartColors = $derived(
+        data.tasksByPriority.map((t) => priorityColors[t.status] ?? "#ccc"),
+    );
+
+    onMount(() => {
+        if (!canvas) return;
+
+        chart = new Chart(canvas, {
+            type: "pie",
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        data: chartValues,
+                        backgroundColor: chartColors,
+                        borderWidth: 2,
+                        borderColor: "#fff",
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            font: { family: "'DM Sans', sans-serif", size: 12 },
+                            boxWidth: 12,
+                            padding: 15,
+                        },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) =>
+                                ` ${context.label}: ${context.raw} Tasks`,
+                        },
+                    },
+                },
+            },
+        });
+
+        return () => {
+            if (chart) chart.destroy();
+        };
+    });
+
+    $effect(() => {
+        if (chart) {
+            chart.data.labels = chartLabels;
+            chart.data.datasets[0].data = chartValues;
+            chart.data.datasets[0].backgroundColor = chartColors;
+            chart.update();
+        }
+    });
 </script>
 
 <div class="dashboard">
     <h1>Dashboard</h1>
 
     <div class="grid">
-
         <!-- Up Next -->
         <div class="card">
             <h2>Up Next</h2>
@@ -40,9 +124,17 @@
             <h2>Overview</h2>
             <div class="overview-grid">
                 {#each data.overviewPersonalTasks as item}
-                    {@const meta = statusMeta[item.status] ?? { icon: '?', color: '#888', bg: '#eee', label: item.status }}
+                    {@const meta = statusMeta[item.status] ?? {
+                        icon: "?",
+                        color: "#888",
+                        bg: "#eee",
+                        label: item.status,
+                    }}
                     <div class="overview-item">
-                        <div class="overview-icon" style="background:{meta.bg}; color:{meta.color}">
+                        <div
+                            class="overview-icon"
+                            style="background:{meta.bg}; color:{meta.color}"
+                        >
                             {meta.icon}
                         </div>
                         <div class="overview-count">{item.count}</div>
@@ -52,18 +144,11 @@
             </div>
         </div>
 
-        <!-- Tasks by Priority -->
         <div class="card">
             <h2>Tasks by Priority</h2>
-            <ul class="priority-list">
-                {#each data.tasksByPriority as t}
-                    <li class="priority-item">
-                        <span class="priority-dot" style="background:{priorityColors[t.status] ?? '#ccc'}"></span>
-                        <span class="priority-label">{t.status}</span>
-                        <span class="priority-count">{t.count}</span>
-                    </li>
-                {/each}
-            </ul>
+            <div class="chart-wrapper">
+                <canvas bind:this={canvas}></canvas>
+            </div>
         </div>
 
         <!-- Tasks Progress placeholder -->
@@ -71,15 +156,14 @@
             <h2>Tasks Progress</h2>
             <div class="placeholder">Diagramm folgt...</div>
         </div>
-
     </div>
 </div>
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
+    @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap");
 
     .dashboard {
-        font-family: 'DM Sans', sans-serif;
+        font-family: "DM Sans", sans-serif;
         background: #f0f2f7;
         min-height: 100vh;
         padding: 2rem;
@@ -109,7 +193,18 @@
         background: #fff;
         border-radius: 16px;
         padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        /* Damit sich das Diagramm sauber an der Card ausrichtet */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Chart Anpassung */
+    .chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 220px; /* Feste Höhe für ein sauberes Dashboard-Layout */
+        margin: auto 0;
     }
 
     /* Up Next */
@@ -142,7 +237,9 @@
         flex-shrink: 0;
     }
 
-    .muted { color: #9ca3af; }
+    .muted {
+        color: #9ca3af;
+    }
 
     /* Overview */
     .overview-grid {
@@ -178,40 +275,6 @@
     .overview-label {
         font-size: 0.78rem;
         color: #9ca3af;
-    }
-
-    /* Priority list */
-    .priority-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .priority-item {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        font-size: 0.9rem;
-    }
-
-    .priority-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        flex-shrink: 0;
-    }
-
-    .priority-label {
-        flex: 1;
-        color: #374151;
-    }
-
-    .priority-count {
-        font-weight: 600;
-        color: #1a1a2e;
     }
 
     /* Placeholder */
