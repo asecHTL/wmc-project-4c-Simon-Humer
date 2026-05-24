@@ -1,40 +1,53 @@
 <script>
   import favicon from "$lib/assets/favicon.svg";
-  import { page } from '$app/stores';
+  import { page } from "$app/stores";
+  import { goto } from "$app/navigation";
   let { children } = $props();
 
   const links = [
-    { href: '/dashboard', label: 'Dashboard', icon: 'ti-layout-dashboard' },
-    { href: '/projects',  label: 'Projects',  icon: 'ti-folder'           },
-    { href: '/tasks',     label: 'Tasks',     icon: 'ti-checkbox'         },
-    { href: '/team',      label: 'Team',      icon: 'ti-users'            },
-    { href: '/settings',  label: 'Settings',  icon: 'ti-settings'         },
+    { href: "/dashboard", label: "Dashboard", icon: "ti-layout-dashboard" },
+    { href: "/projects", label: "Projects", icon: "ti-folder" },
+    { href: "/tasks", label: "Tasks", icon: "ti-checkbox" },
+    { href: "/team", label: "Team", icon: "ti-users" },
+    { href: "/settings", label: "Settings", icon: "ti-settings" },
   ];
+
+  let isLoginPage = $derived($page.url.pathname === "/");
 </script>
 
 <svelte:head>
   <link rel="icon" href={favicon} />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+  />
 </svelte:head>
 
 <div class="layout">
-  <nav class="sidebar">
-    <div class="logo">Task Flow</div>
+  {#if !isLoginPage}
+    <nav class="sidebar">
+      <div class="logo">Task Flow</div>
 
-    {#each links as link}
-      <a href={link.href} class="nav-link" class:active={$page.url.pathname.startsWith(link.href)}>
-        <i class="ti {link.icon}" aria-hidden="true"></i>
-        {link.label}
-      </a>
-    {/each}
+      {#each links as link}
+        <a
+          href={link.href}
+          class="nav-link"
+          class:active={$page.url.pathname.startsWith(link.href)}
+        >
+          <i class="ti {link.icon}" aria-hidden="true"></i>
+          {link.label}
+        </a>
+      {/each}
 
-    <div class="spacer"></div>
+      <div class="spacer"></div>
 
-    <div class="user-block">
-      <div class="avatar">MM</div>
-      <span class="user-name">Max Mustermann</span>
-    </div>
-  </nav>
+      <div class="user-block">
+        <button onclick={() => goto("/")}>Logout</button>
+        <div class="avatar">MM</div>
+        <span class="user-name">Max Mustermann</span>
+      </div>
+    </nav>
+  {/if}
 
   <main class="content">
     {@render children()}
@@ -59,7 +72,7 @@
   }
 
   .logo {
-    background: #7F77DD;
+    background: #7f77dd;
     color: #fff;
     font-weight: 500;
     font-size: 14px;
@@ -92,8 +105,8 @@
   }
 
   .nav-link.active {
-    background: #EEEDFE;
-    color: #534AB7;
+    background: #eeedfe;
+    color: #534ab7;
   }
 
   .spacer {
