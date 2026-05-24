@@ -32,7 +32,25 @@
 
     async function deleteUser() {
         if(confirm("Möchtest du diesen Benutzer wirklich löschen?")) {
-            console.log("Lösche User:", data.user?.userId);
+            const userId = data.user?.userId;
+            console.log("Lösche User:", userId);
+            
+            if (!userId) {
+                alert("Fehler: Keine User-ID gefunden.");
+                return;
+            }
+
+            const res = await fetch(`http://localhost:3000/profile/user/${userId}`, {
+                method: 'DELETE' 
+            });
+
+            if (res.ok) {
+                alert("Benutzer erfolgreich gelöscht!");
+                goto('/'); 
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                alert(`Fehler beim Löschen: ${errData.error || res.statusText}`);
+            }
         }
     }
 </script>

@@ -218,7 +218,7 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
 
-     
+
         const query = `
             SELECT taskClosed AS date, COUNT(*) AS count 
             FROM Tasks 
@@ -231,7 +231,7 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
 
         const tasksStatistic = await db.all(query, [userId]) || [];
 
-     
+
 
         res.json(tasksStatistic);
 
@@ -240,22 +240,39 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
     }
 });
 
-app.get('/profile/user/:userId',async (req,res)=>{
-    const {userId} = req.params;
+app.get('/profile/user/:userId', async (req, res) => {
+    const { userId } = req.params;
 
-    try{
+    try {
         const user = await db.get('Select * from Users where userId = ?', [userId]);
-        if(user === null){
-             res.status(405).send('No user found with the given Id');
-        }else{
+        if (user === null) {
+            res.status(405).send('No user found with the given Id');
+        } else {
             return res.json(user);
         }
 
-   } catch (error) {
+    } catch (error) {
+        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+    }
+});
+
+
+app.delete('/profile/user/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        const result = await db.run('DELETE FROM Users WHERE userId = ?', [userId]);
+
+        if (result.changes > 0) {
+            res.status(204).send();
+        } else {
+            res.status(404).send('User not found');
+        }
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'Datenbankfehler', details: error.message });
     }
 })
-
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
