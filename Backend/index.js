@@ -150,7 +150,7 @@ app.post('/user/login', async (req, res) => {
     }
 });
 
-app.get('/dashboard/personalNextTasks{/:userId}', async (req, res) => {
+app.get('/dashboard/personalNextTasks/:userId', async (req, res) => {
     const { userId } = req.params || {};
     const tasks = await db.all('Select * from Tasks where fkUserId = ? LIMIT 3', [userId]);
     if (tasks === null) {
@@ -161,7 +161,7 @@ app.get('/dashboard/personalNextTasks{/:userId}', async (req, res) => {
 
 });
 
-app.get('/dashboard/overviewPersonalTasks{/:userId}', async (req, res) => {
+app.get('/dashboard/overviewPersonalTasks/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
 
@@ -187,7 +187,7 @@ app.get('/dashboard/overviewPersonalTasks{/:userId}', async (req, res) => {
 });
 
 
-app.get('/dashboard/tasksByPriority{/:userId}', async (req, res) => {
+app.get('/dashboard/tasksByPriority/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
 
@@ -239,6 +239,22 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
         res.status(500).json({ error: 'Datenbankfehler', details: error.message });
     }
 });
+
+app.get('/profile/user/:userId',async (req,res)=>{
+    const {userId} = req.params;
+
+    try{
+        const user = await db.get('Select * from Users where userId = ?', [userId]);
+        if(user === null){
+             res.status(405).send('No user found with the given Id');
+        }else{
+            return res.json(user);
+        }
+
+   } catch (error) {
+        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+    }
+})
 
 
 app.listen(port, () => {
