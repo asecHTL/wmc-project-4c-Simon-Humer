@@ -29,7 +29,7 @@ console.log('🌱 Seeding Users...');
 const userIds = [];
 for (const u of rawUsers) {
     const hashed = await bcrypt.hash(u.password, 10);
-    const result = await db.run(
+    await db.run(
         `INSERT OR IGNORE INTO Users (username, email, password, firstname, lastname, birthday)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [u.username, u.email, hashed, u.firstname, u.lastname, u.birthday]
@@ -55,7 +55,7 @@ const projects = [
 console.log('🌱 Seeding Projects...');
 const projectIds = [];
 for (const p of projects) {
-    const result = await db.run(
+    await db.run(
         `INSERT OR IGNORE INTO Projects (projectName, projectPriority, projectEndDate)
          VALUES (?, ?, ?)`,
         [p.projectName, p.projectPriority, p.projectEndDate]
@@ -68,49 +68,67 @@ console.log(`   ✓ ${projectIds.length} Projects`);
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 
 const taskTemplates = [
-    { taskTitle: 'UI/UX Design Review',        taskDescription: 'Review the latest Figma mockups and provide feedback.',         taskPriority: 'High',   taskEndDate: '2025-05-10', taskStatus: 'Done'       },
-    { taskTitle: 'Client Meeting Preparation',  taskDescription: 'Prepare agenda and slides for the upcoming client call.',      taskPriority: 'High',   taskEndDate: '2025-05-12', taskStatus: 'Done'       },
-    { taskTitle: 'Project Review',              taskDescription: 'Conduct mid-sprint project review with the full team.',        taskPriority: 'Medium', taskEndDate: '2025-05-14', taskStatus: 'Done'       },
-    { taskTitle: 'Write Unit Tests',            taskDescription: 'Add unit tests for the authentication module.',                taskPriority: 'Medium', taskEndDate: '2025-05-20', taskStatus: 'InProgress' },
-    { taskTitle: 'Database Schema Migration',   taskDescription: 'Migrate legacy schema to the new normalized structure.',       taskPriority: 'High',   taskEndDate: '2025-05-25', taskStatus: 'InProgress' },
-    { taskTitle: 'Update API Documentation',    taskDescription: 'Update Swagger docs to reflect the latest endpoint changes.',  taskPriority: 'Low',    taskEndDate: '2025-06-01', taskStatus: 'InProgress' },
-    { taskTitle: 'Performance Profiling',       taskDescription: 'Profile the dashboard load time and identify bottlenecks.',   taskPriority: 'Medium', taskEndDate: '2025-06-05', taskStatus: 'OnHold'     },
-    { taskTitle: 'Accessibility Audit',         taskDescription: 'Run WCAG 2.1 AA audit on all public-facing pages.',           taskPriority: 'Low',    taskEndDate: '2025-06-10', taskStatus: 'OnHold'     },
-    { taskTitle: 'Integrate Payment Gateway',   taskDescription: 'Connect Stripe API for subscription billing.',                taskPriority: 'High',   taskEndDate: '2025-04-30', taskStatus: 'Overdue'    },
-    { taskTitle: 'Fix Login Redirect Bug',      taskDescription: 'Users are not being redirected correctly after OAuth login.', taskPriority: 'High',   taskEndDate: '2025-04-28', taskStatus: 'Overdue'    },
-    { taskTitle: 'Deploy Staging Environment',  taskDescription: 'Set up Docker-based staging server on AWS EC2.',              taskPriority: 'Medium', taskEndDate: '2025-05-18', taskStatus: 'Done'       },
-    { taskTitle: 'Code Review Sprint 7',        taskDescription: 'Review all PRs opened during sprint 7.',                      taskPriority: 'Low',    taskEndDate: '2025-05-22', taskStatus: 'InProgress' },
-    { taskTitle: 'Design Email Templates',      taskDescription: 'Create branded HTML email templates for notifications.',      taskPriority: 'Low',    taskEndDate: '2025-06-15', taskStatus: 'OnHold'     },
-    { taskTitle: 'Security Pen Test',           taskDescription: 'Schedule and coordinate third-party penetration testing.',    taskPriority: 'High',   taskEndDate: '2025-05-01', taskStatus: 'Overdue'    },
-    { taskTitle: 'Refactor State Management',   taskDescription: 'Replace Redux with Zustand in the frontend app.',             taskPriority: 'Medium', taskEndDate: '2025-07-01', taskStatus: 'InProgress' },
+    { taskTitle: 'UI/UX Design Review',        taskDescription: 'Review the latest Figma mockups and provide feedback.',         taskPriority: 'High',   taskEndDate: '2025-05-10', defaultStatus: 'Done' },
+    { taskTitle: 'Client Meeting Preparation',  taskDescription: 'Prepare agenda and slides for the upcoming client call.',      taskPriority: 'High',   taskEndDate: '2025-05-12', defaultStatus: 'Done' },
+    { taskTitle: 'Project Review',              taskDescription: 'Conduct mid-sprint project review with the full team.',        taskPriority: 'Medium', taskEndDate: '2025-05-14', defaultStatus: 'Done' },
+    { taskTitle: 'Write Unit Tests',            taskDescription: 'Add unit tests for the authentication module.',                taskPriority: 'Medium', taskEndDate: '2025-05-20', defaultStatus: 'InProgress' },
+    { taskTitle: 'Database Schema Migration',   taskDescription: 'Migrate legacy schema to the new normalized structure.',       taskPriority: 'High',   taskEndDate: '2025-05-25', defaultStatus: 'InProgress' },
+    { taskTitle: 'Update API Documentation',    taskDescription: 'Update Swagger docs to reflect the latest endpoint changes.',  taskPriority: 'Low',    taskEndDate: '2025-06-01', defaultStatus: 'InProgress' },
+    { taskTitle: 'Performance Profiling',       taskDescription: 'Profile the dashboard load time and identify bottlenecks.',   taskPriority: 'Medium', taskEndDate: '2025-06-05', defaultStatus: 'OnHold' },
+    { taskTitle: 'Accessibility Audit',         taskDescription: 'Run WCAG 2.1 AA audit on all public-facing pages.',           taskPriority: 'Low',    taskEndDate: '2025-06-10', defaultStatus: 'OnHold' },
+    { taskTitle: 'Integrate Payment Gateway',   taskDescription: 'Connect Stripe API for subscription billing.',                taskPriority: 'High',   taskEndDate: '2025-04-30', defaultStatus: 'Overdue' },
+    { taskTitle: 'Fix Login Redirect Bug',      taskDescription: 'Users are not being redirected correctly after OAuth login.', taskPriority: 'High',   taskEndDate: '2025-04-28', defaultStatus: 'Overdue' },
+    { taskTitle: 'Deploy Staging Environment',  taskDescription: 'Set up Docker-based staging server on AWS EC2.',              taskPriority: 'Medium', taskEndDate: '2025-05-18', defaultStatus: 'Done' },
+    { taskTitle: 'Code Review Sprint 7',        taskDescription: 'Review all PRs opened during sprint 7.',                      taskPriority: 'Low',    taskEndDate: '2025-05-22', defaultStatus: 'InProgress' },
+    { taskTitle: 'Design Email Templates',      taskDescription: 'Create branded HTML email templates for notifications.',      taskPriority: 'Low',    taskEndDate: '2025-06-15', defaultStatus: 'OnHold' },
+    { taskTitle: 'Security Pen Test',           taskDescription: 'Schedule and coordinate third-party penetration testing.',    taskPriority: 'High',   taskEndDate: '2025-05-01', defaultStatus: 'Overdue' },
+    { taskTitle: 'Refactor State Management',   taskDescription: 'Replace Redux with Zustand in the frontend app.',             taskPriority: 'Medium', taskEndDate: '2025-07-01', defaultStatus: 'InProgress' },
 ];
 
 console.log('🌱 Seeding Tasks...');
 const taskIds = [];
-for (const u of userIds) {
-    // Ein Starttag für die erledigten Tasks dieses Nutzers (z.B. ab dem 01. Mai 2025)
-    let doneTaskDayCounter = 1;
 
-    for (const t of taskTemplates) {
+for (const u of userIds) {
+    // 1. Bestimme eine zufällige Anzahl an Tasks für DIESEN Nutzer (z.B. zwischen 10 und 20)
+    const numberOfTasksForUser = Math.floor(Math.random() * 11) + 10;
+
+    for (let i = 0; i < numberOfTasksForUser; i++) {
+        // Such dir ein zufälliges Template aus der Liste
+        const randomTemplate = taskTemplates[Math.floor(Math.random() * taskTemplates.length)];
+        
+        let currentStatus = randomTemplate.defaultStatus;
         let taskClosedValue = null;
 
-        // Wenn der Task erledigt ist, verpassen wir ihm ein ansteigendes Datum
-        if (t.taskStatus === 'Done') {
-            // Generiert z.B. '2025-05-01', beim nächsten erledigten Task '2025-05-02' usw.
-            const dayString = String(doneTaskDayCounter).padStart(2, '0');
+        // 2. Erhöhe die Chance auf "Done" massiv (z.B. 65% Chance, dass der Task erledigt ist)
+        if (Math.random() < 0.65) {
+            currentStatus = 'Done';
+        }
+
+        // Wenn der Task erledigt ist, generieren wir ein zufälliges Abschlussdatum im Mai 2025
+        if (currentStatus === 'Done') {
+            // Zufälliger Tag zwischen 1 und 28 (um Probleme mit dem Monatsende zu vermeiden)
+            const randomDay = Math.floor(Math.random() * 28) + 1;
+            const dayString = String(randomDay).padStart(2, '0');
             taskClosedValue = `2025-05-${dayString}`;
-            doneTaskDayCounter++; 
         }
 
         const result = await db.run(
             `INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, taskClosed, fkUserId)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [t.taskTitle, t.taskDescription, t.taskPriority, t.taskEndDate, t.taskStatus, taskClosedValue, u]
+            [
+                randomTemplate.taskTitle, 
+                randomTemplate.taskDescription, 
+                randomTemplate.taskPriority, 
+                randomTemplate.taskEndDate, 
+                currentStatus, 
+                taskClosedValue, 
+                u
+            ]
         );
         taskIds.push(result.lastID);
     }
 }
-console.log(`   ✓ ${taskIds.length} Tasks (${taskTemplates.length} per user)`);
+console.log(`   ✓ ${taskIds.length} Gesamt-Tasks verteilt generiert.`);
 
 // ── ProjectUserTable ──────────────────────────────────────────────────────────
 

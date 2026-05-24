@@ -38,13 +38,22 @@
     };
 
     let canvas = $state(null);
-    let chart = null;
+    let canvasProgress = $state(null);
 
- 
+    let chart = null;
+    let chartProgress = null;
+
     let chartLabels = $derived(data.tasksByPriority.map((t) => t.status));
     let chartValues = $derived(data.tasksByPriority.map((t) => t.count));
     let chartColors = $derived(
         data.tasksByPriority.map((t) => priorityColors[t.status] ?? "#ccc"),
+    );
+
+    let progressLabels = $derived(
+        data.personalTasksDoneGraph.map((t) => t.date),
+    );
+    let progressValues = $derived(
+        data.personalTasksDoneGraph.map((t) => t.count),
     );
 
     onMount(() => {
@@ -85,8 +94,69 @@
             },
         });
 
+        if (canvasProgress) {
+            chartProgress = new Chart(canvasProgress, {
+                type: "line",
+                data: {
+                    labels: progressLabels,
+                    datasets: [
+                        {
+                            label: "Anzahl Tasks",
+                            data: progressValues,
+                            backgroundColor: "#5bc4a0",
+                            borderRadius: 6,
+                            backgroundColor: (context) => {
+                                const ctx = context.chart.ctx;
+                                const gradient = ctx.createLinearGradient(
+                                    0,
+                                    0,
+                                    0,
+                                    220,
+                                );
+                                gradient.addColorStop(
+                                    0,
+                                    "rgba(59, 130, 246, 0.3)",
+                                );
+                                gradient.addColorStop(
+                                    1,
+                                    "rgba(59, 130, 246, 0.0)",
+                                );
+                                return gradient;
+                            },
+                            fill: true,
+                            tension: 0.1,
+                            pointRadius:5,
+                            pointHoverRadius:7,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                display: false
+                            }
+                        },
+                        x:{
+                            display : true,
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                },
+            });
+        }
+
         return () => {
             if (chart) chart.destroy();
+            if (chartProgress) chartProgress.destroy();
         };
     });
 
@@ -96,6 +166,11 @@
             chart.data.datasets[0].data = chartValues;
             chart.data.datasets[0].backgroundColor = chartColors;
             chart.update();
+        }
+        if (chartProgress) {
+            chartProgress.data.labels = progressLabels;
+            chartProgress.data.datasets[0].data = progressValues;
+            chartProgress.update();
         }
     });
 </script>
@@ -151,10 +226,11 @@
             </div>
         </div>
 
-        <!-- Tasks Progress placeholder -->
         <div class="card">
             <h2>Tasks Progress</h2>
-            <div class="placeholder">Diagramm folgt...</div>
+            <div class="placeholder">
+                <canvas bind:this={canvasProgress}></canvas>
+            </div>
         </div>
     </div>
 </div>
