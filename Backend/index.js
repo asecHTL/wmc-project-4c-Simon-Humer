@@ -23,7 +23,8 @@ await db.exec(`
         password TEXT NOT NULL,
         firstname TEXT NOT NULL,
         lastname TEXT NOT NULL,
-        birthday DATE
+        birthday DATE,
+        language Text
     )
 `);
 
@@ -272,7 +273,43 @@ app.delete('/profile/user/:userId', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Datenbankfehler', details: error.message });
     }
-})
+});
+
+
+app.put('/profile/user/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+
+        const user = await db.get('SELECT * FROM Users WHERE userId = ?', [userId]);
+        
+        if (user) {
+            const firstname = req.body.firstname || user.firstname;
+            const lastname = req.body.lastname || user.lastname;
+            const email = req.body.email || user.email;
+            const birthday = req.body.birthday || user.birthday;
+            const password = req.body.password || user.password;
+            const username = req.body.username || user.username;
+            const language = req.body.language || user.language;
+
+          
+            await db.run(
+                `UPDATE Users 
+                 SET firstname = ?, lastname = ?, email = ?, birthday = ?, password = ?, username = ?, language = ? 
+                 WHERE userId = ?`,
+                [firstname, lastname, email, birthday, password, username, language, userId]
+            );
+
+          
+            res.json({ userId, firstname, lastname, email, birthday, username, language });
+        } else {
+            res.status(404).send('User not found');
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);

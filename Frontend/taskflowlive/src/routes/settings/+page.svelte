@@ -2,6 +2,7 @@
     import { goto } from "$app/navigation";
 
     let { data } = $props();
+    import { userData } from "$lib/shared/User.svelte.js";
 
    
     let userForm = $state({
@@ -28,6 +29,22 @@
 
     async function saveUserSettings() {
         console.log("Speichere:", userForm);
+        const res = await fetch(`http://localhost:3000/profile/user/${userData.userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(userForm)
+            });
+
+            if (res.ok) {
+                alert("Einstellungen erfolgreich gespeichert!");
+                goto('../settings')
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                alert(`Fehler beim Speichern: ${errData.error || res.statusText}`);
+            }
+        
     }
 
     async function deleteUser() {
@@ -56,10 +73,7 @@
 </script>
 
 <div class="settings-container">
-    <div class="header-row">
-        <h1>Settings</h1>
-        <button class="btn-new-member">+ New Member</button>
-    </div>
+  
 
     <div class="card">
         <div class="form-grid">
