@@ -1,16 +1,17 @@
 <script>
+  import { t, setLanguage } from "$lib/i18n/i18n.svelte.js";
   import favicon from "$lib/assets/favicon.svg";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   let { children } = $props();
 
-  const links = [
-    { href: "/dashboard", label: "Dashboard", icon: "ti-layout-dashboard" },
-    { href: "/projects", label: "Projects", icon: "ti-folder" },
-    { href: "/tasks", label: "Tasks", icon: "ti-checkbox" },
-    { href: "/team", label: "Team", icon: "ti-users" },
-    { href: "/settings", label: "Settings", icon: "ti-settings" },
-  ];
+  const links = $derived([
+    { href: "/dashboard", label: t("dashboard") || "Dashboard", icon: "ti-layout-dashboard" },
+    { href: "/projects", label: t("projects") || "Projects", icon: "ti-folder" },
+    { href: "/tasks", label: t("tasks") || "Tasks", icon: "ti-checkbox" },
+    { href: "/team", label: t("team") || "Team", icon: "ti-users" },
+    { href: "/settings", label: t("settings") || "Settings", icon: "ti-settings" },
+  ]);
 
   let isLoginPage = $derived($page.url.pathname === "/");
 </script>
@@ -40,6 +41,11 @@
       {/each}
 
       <div class="spacer"></div>
+      
+      <div class="lang-switch">
+        <button onclick={() => setLanguage('en')}>EN</button>
+        <button onclick={() => setLanguage('de')}>DE</button>
+      </div>
 
       <div class="user-block">
         <button onclick={() => goto("/")}>Logout</button>
@@ -107,6 +113,25 @@
   .nav-link.active {
     background: #eeedfe;
     color: #534ab7;
+  }
+
+  .lang-switch {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 1rem;
+  }
+
+  .lang-switch button {
+    background: #e0e0e0;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+  }
+
+  .lang-switch button:hover {
+    background: #d0d0d0;
   }
 
   .spacer {
