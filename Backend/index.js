@@ -315,7 +315,6 @@ app.put('/profile/user/:userId', async (req, res) => {
             const username = req.body.username || user.username;
             const language = req.body.language || user.language;
 
-          
             await db.run(
                 `UPDATE Users 
                  SET firstname = ?, lastname = ?, email = ?, birthday = ?, password = ?, username = ?, language = ? 
@@ -323,7 +322,6 @@ app.put('/profile/user/:userId', async (req, res) => {
                 [firstname, lastname, email, birthday, password, username, language, userId]
             );
 
-          
             res.json({ userId, firstname, lastname, email, birthday, username, language });
         } else {
             res.status(404).send('User not found');
@@ -334,6 +332,31 @@ app.put('/profile/user/:userId', async (req, res) => {
     }
 });
 
+
+app.put('/user/language/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        const { language } = req.body;
+
+        if (!language) {
+            return res.status(400).send('Language is required');
+        }
+
+        const result = await db.run(
+            'UPDATE Users SET language = ? WHERE userId = ?',
+            [language, userId]
+        );
+
+        if (result.changes > 0) {
+            res.json({ userId, language });
+        } else {
+            res.status(404).send('User not found');
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);

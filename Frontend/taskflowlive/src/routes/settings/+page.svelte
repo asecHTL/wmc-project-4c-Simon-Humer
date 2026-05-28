@@ -12,8 +12,7 @@
         birthday: data.user?.birthday ?? '',
         username: data.user?.username ?? '',
         email: data.user?.email ?? '',
-        password: data.user?.password ?? '',
-        language: data.user?.language ?? 'en'
+        password: data.user?.password ?? ''
     });
 
     $effect(() => {
@@ -24,7 +23,6 @@
             userForm.username = data.user.username ?? '';
             userForm.email = data.user.email ?? '';
             userForm.password = data.user.password ?? '';
-            userForm.language = data.user.language ?? 'en';
         }
     });
 
@@ -71,11 +69,6 @@
             }
         }
     }
-
-    function handleLanguageChange(e) {
-        const lang = e.target.value;
-        setLanguage(lang);
-    }
 </script>
 
 <div class="settings-container">
@@ -93,15 +86,7 @@
                 <input type="text" id="username" bind:value={userForm.username} placeholder="Value" />
             </div>
 
-            <div class="form-group">
-                <label for="language">{t("language")}</label>
-                <div class="select-wrapper">
-                    <select id="language" bind:value={userForm.language} onchange={handleLanguageChange}>
-                        <option value="en">English</option>
-                        <option value="de">Deutsch</option>
-                    </select>
-                </div>
-            </div>
+            <div class="empty-space"></div>
 
             <div class="form-group">
                 <label for="lastname">{t("lastname")}</label>

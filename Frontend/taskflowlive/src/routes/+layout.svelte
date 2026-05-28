@@ -3,6 +3,9 @@
   import favicon from "$lib/assets/favicon.svg";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { userData } from "$lib/shared/User.svelte.js";
+  import { onMount } from "svelte";
+
   let { children } = $props();
 
   const links = $derived([
@@ -14,6 +17,22 @@
   ]);
 
   let isLoginPage = $derived($page.url.pathname === "/");
+
+  onMount(async () => {
+    if (userData.userId) {
+      try {
+        const res = await fetch(`http://localhost:3000/profile/user/${userData.userId}`);
+        if (res.ok) {
+          const user = await res.json();
+          if (user.language) {
+            setLanguage(user.language);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch user language:", e);
+      }
+    }
+  });
 </script>
 
 <svelte:head>
@@ -43,8 +62,8 @@
       <div class="spacer"></div>
       
       <div class="lang-switch">
-        <button onclick={() => setLanguage('en')}>EN</button>
-        <button onclick={() => setLanguage('de')}>DE</button>
+        <button onclick={() => setLanguage('en', userData.userId)}>EN</button>
+        <button onclick={() => setLanguage('de', userData.userId)}>DE</button>
       </div>
 
       <div class="user-block">

@@ -8,6 +8,8 @@
 
     import { userData } from '$lib/shared/User.svelte.js';
 
+    import { t, setLanguage } from '$lib/i18n/i18n.svelte.js';
+
     async function handleLogin(event) {
         event.preventDefault();
         errorMessage = '';
@@ -33,6 +35,9 @@
                 console.log('Login erfolgreich:', user);
                 
                 userData.userId = user.userId
+                if (user.language) {
+                    setLanguage(user.language);
+                }
 
                 
                 goto(`../dashboard?userId=${userData.userId}`);
