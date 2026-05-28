@@ -32,7 +32,10 @@ export const locales = {
         errorSaving: "Error saving settings",
         errorDeleting: "Error deleting user",
         missingUserId: "Missing userId parameter",
-        noTasksFound: "No tasks found"
+        noTasksFound: "No tasks found",
+        week: "Week",
+        month: "Month",
+        year: "Year"
     },
     de: {
         welcome: "Willkommen bei TaskFlow Live",
@@ -67,6 +70,9 @@ export const locales = {
         errorSaving: "Fehler beim Speichern der Einstellungen",
         errorDeleting: "Fehler beim Löschen des Benutzers",
         missingUserId: "Fehlende userId Parameter",
-        noTasksFound: "Keine Aufgaben gefunden"
+        noTasksFound: "Keine Aufgaben gefunden",
+        week: "Woche",
+        month: "Monat",
+        year: "Jahr"
     }
 };

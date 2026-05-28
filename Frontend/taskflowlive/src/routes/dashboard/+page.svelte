@@ -2,8 +2,16 @@
     import { onMount } from "svelte";
     import Chart from "chart.js/auto";
     import { t } from "$lib/i18n/i18n.svelte.js";
+    import { page } from "$app/stores";
+    import { goto } from "$app/navigation";
 
     let { data } = $props();
+
+    function updateFilter(filter) {
+        const url = new URL($page.url);
+        url.searchParams.set('taskGraphDate', filter);
+        goto(url.toString(), { keepFocus: true, noScroll: true });
+    }
 
     const statusMeta = $derived({
         Done: {
@@ -58,42 +66,42 @@
     );
 
     onMount(() => {
-        if (!canvas) return;
-
-        chart = new Chart(canvas, {
-            type: "pie",
-            data: {
-                labels: chartLabels,
-                datasets: [
-                    {
-                        data: chartValues,
-                        backgroundColor: chartColors,
-                        borderWidth: 2,
-                        borderColor: "#fff",
-                    },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: "bottom",
-                        labels: {
-                            font: { family: "'DM Sans', sans-serif", size: 12 },
-                            boxWidth: 12,
-                            padding: 15,
+        if (canvas) {
+            chart = new Chart(canvas, {
+                type: "pie",
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            data: chartValues,
+                            backgroundColor: chartColors,
+                            borderWidth: 2,
+                            borderColor: "#fff",
                         },
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) =>
-                                ` ${context.label}: ${context.raw} ${t("tasks")}`,
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                font: { family: "'DM Sans', sans-serif", size: 12 },
+                                boxWidth: 12,
+                                padding: 15,
+                            },
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) =>
+                                    ` ${context.label}: ${context.raw} ${t("tasks")}`,
+                            },
                         },
                     },
                 },
-            },
-        });
+            });
+        }
 
         if (canvasProgress) {
             chartProgress = new Chart(canvasProgress, {
@@ -148,6 +156,18 @@
                             display : true,
                             grid: {
                                 display: false
+                            },
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 45,
+                                minRotation: 45,
+                                callback: function(val, index) {
+                                    const filter = new URL(window.location.href).searchParams.get('taskGraphDate') || '1M';
+                                    if (filter === '1W') return this.getLabelForValue(val);
+                                    if (filter === '1M') return index % 2 === 0 ? this.getLabelForValue(val) : '';
+                                    if (filter === '1Y') return index % 3 === 0 ? this.getLabelForValue(val) : '';
+                                    return this.getLabelForValue(val);
+                                }
                             }
                         }
                     },
@@ -183,7 +203,6 @@
     <h1>{t("dashboard")}</h1>
 
     <div class="grid">
-        <!-- Up Next -->
         <div class="card">
             <h2>{t("upcomingTasks")}</h2>
             <ul class="task-list">
@@ -198,7 +217,6 @@
             </ul>
         </div>
 
-        <!-- Overview -->
         <div class="card">
             <h2>{t("personalOverview")}</h2>
             <div class="overview-grid">
@@ -231,7 +249,29 @@
         </div>
 
         <div class="card">
-            <h2>{t("doneTasks")}</h2>
+            <div class="card-header">
+                <h2>{t("doneTasks")}</h2>
+                <div class="filter-buttons">
+                    <button 
+                        class:active={$page.url.searchParams.get('taskGraphDate') === '1W'} 
+                        onclick={() => updateFilter('1W')}
+                    >
+                        {t("week")}
+                    </button>
+                    <button 
+                        class:active={!$page.url.searchParams.get('taskGraphDate') || $page.url.searchParams.get('taskGraphDate') === '1M'} 
+                        onclick={() => updateFilter('1M')}
+                    >
+                        {t("month")}
+                    </button>
+                    <button 
+                        class:active={$page.url.searchParams.get('taskGraphDate') === '1Y'} 
+                        onclick={() => updateFilter('1Y')}
+                    >
+                        {t("year")}
+                    </button>
+                </div>
+            </div>
             <div class="placeholder">
                 <canvas bind:this={canvasProgress}></canvas>
             </div>
@@ -274,20 +314,54 @@
         border-radius: 16px;
         padding: 1.5rem;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-        /* Damit sich das Diagramm sauber an der Card ausrichtet */
         display: flex;
         flex-direction: column;
     }
 
-    /* Chart Anpassung */
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .card-header h2 {
+        margin-bottom: 0;
+    }
+
+    .filter-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .filter-buttons button {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        color: #6b7280;
+        transition: all 0.2s;
+    }
+
+    .filter-buttons button:hover {
+        background: #e5e7eb;
+    }
+
+    .filter-buttons button.active {
+        background: #7f77dd;
+        color: white;
+        border-color: #7f77dd;
+    }
+
     .chart-wrapper {
         position: relative;
         width: 100%;
-        height: 220px; /* Feste Höhe für ein sauberes Dashboard-Layout */
+        height: 220px;
         margin: auto 0;
     }
 
-    /* Up Next */
     .task-list {
         list-style: none;
         padding: 0;
@@ -321,7 +395,6 @@
         color: #9ca3af;
     }
 
-    /* Overview */
     .overview-grid {
         display: flex;
         gap: 2rem;
@@ -357,7 +430,6 @@
         color: #9ca3af;
     }
 
-    /* Placeholder */
     .placeholder {
         color: #9ca3af;
         font-size: 0.9rem;

@@ -3,6 +3,7 @@ import { userData } from '$lib/shared/User.svelte.js';
 
 export async function  load({url, fetch}) {
     const userId = url.searchParams.get('userId') || userData.userId;
+    const taskGraphDate = url.searchParams.get('taskGraphDate') || '1M';
 
     if (!userId) {
         throw error(400, 'Missing userId parameter');
@@ -13,7 +14,7 @@ export async function  load({url, fetch}) {
             fetch(`http://localhost:3000/dashboard/personalNextTasks/${userId}`),
             fetch(`http://localhost:3000/dashboard/overviewPersonalTasks/${userId}`),
             fetch(`http://localhost:3000/dashboard/tasksByPriority/${userId}`),
-            fetch(`http://localhost:3000/dashboard/personalTasksDoneGraph/${userId}`)
+            fetch(`http://localhost:3000/dashboard/personalTasksDoneGraph/${userId}?taskGraphDate=${taskGraphDate}`)
         ]);
 
         if (!res1.ok || !res2.ok || !res3.ok || !res4.ok) {

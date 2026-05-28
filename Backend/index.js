@@ -203,8 +203,6 @@ app.get('/dashboard/tasksByPriority/:userId', async (req, res) => {
         tasks.forEach(task => {
             const entry = taskOverviewPriority.find(s => s.status === task.taskPriority);
             if (entry) entry.count++;
-
-            console.log(entry);
         });
 
 
@@ -234,7 +232,8 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
         if (taskGraphDate) {
             let taskGraphDateTasksFiltered = [];
             const currentDate = new Date();
-            let dateUntil = new Date();
+            currentDate.setHours(0, 0, 0, 0); 
+            let dateUntil = new Date(currentDate);
 
             switch (taskGraphDate) {
                 case '1W':
@@ -255,7 +254,6 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
                     const taskDate = new Date(x.date);
                     return taskDate >= dateUntil;
                 });
-                
                 return res.json(taskGraphDateTasksFiltered);
             }
         }
