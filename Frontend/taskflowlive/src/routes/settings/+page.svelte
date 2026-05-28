@@ -1,5 +1,6 @@
 <script>
     import { goto } from "$app/navigation";
+    import { t, setLanguage } from "$lib/i18n/i18n.svelte.js";
 
     let { data } = $props();
     import { userData } from "$lib/shared/User.svelte.js";
@@ -12,7 +13,7 @@
         username: data.user?.username ?? '',
         email: data.user?.email ?? '',
         password: data.user?.password ?? '',
-        language: data.user?.language ?? 'Englisch'
+        language: data.user?.language ?? 'en'
     });
 
     $effect(() => {
@@ -23,7 +24,7 @@
             userForm.username = data.user.username ?? '';
             userForm.email = data.user.email ?? '';
             userForm.password = data.user.password ?? '';
-            userForm.language = data.user.language ?? 'Englisch';
+            userForm.language = data.user.language ?? 'en';
         }
     });
 
@@ -38,22 +39,22 @@
             });
 
             if (res.ok) {
-                alert("Einstellungen erfolgreich gespeichert!");
+                alert(t("settingsSaved"));
                 goto('../settings')
             } else {
                 const errData = await res.json().catch(() => ({}));
-                alert(`Fehler beim Speichern: ${errData.error || res.statusText}`);
+                alert(`${t("errorSaving")}: ${errData.error || res.statusText}`);
             }
         
     }
 
     async function deleteUser() {
-        if(confirm("Möchtest du diesen Benutzer wirklich löschen?")) {
+        if(confirm(t("confirmDelete"))) {
             const userId = data.user?.userId;
             console.log("Lösche User:", userId);
             
             if (!userId) {
-                alert("Fehler: Keine User-ID gefunden.");
+                alert(t("missingUserId"));
                 return;
             }
 
@@ -62,13 +63,18 @@
             });
 
             if (res.ok) {
-                alert("Benutzer erfolgreich gelöscht!");
+                alert(t("deleteSuccess"));
                 goto('/'); 
             } else {
                 const errData = await res.json().catch(() => ({}));
-                alert(`Fehler beim Löschen: ${errData.error || res.statusText}`);
+                alert(`${t("errorDeleting")}: ${errData.error || res.statusText}`);
             }
         }
+    }
+
+    function handleLanguageChange(e) {
+        const lang = e.target.value;
+        setLanguage(lang);
     }
 </script>
 
@@ -78,54 +84,54 @@
     <div class="card">
         <div class="form-grid">
             <div class="form-group">
-                <label for="firstname">Firstname</label>
+                <label for="firstname">{t("firstname")}</label>
                 <input type="text" id="firstname" bind:value={userForm.firstname} placeholder="Value" />
             </div>
 
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="username">{t("username")}</label>
                 <input type="text" id="username" bind:value={userForm.username} placeholder="Value" />
             </div>
 
             <div class="form-group">
-                <label for="language">Language</label>
+                <label for="language">{t("language")}</label>
                 <div class="select-wrapper">
-                    <select id="language" bind:value={userForm.language}>
-                        <option value="Englisch">Englisch</option>
-                        <option value="Deutsch">Deutsch</option>
+                    <select id="language" bind:value={userForm.language} onchange={handleLanguageChange}>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
                     </select>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="lastname">Lastname</label>
+                <label for="lastname">{t("lastname")}</label>
                 <input type="text" id="lastname" bind:value={userForm.lastname} placeholder="Value" />
             </div>
 
             <div class="form-group">
-                <label for="email">Email</label>
+                <label for="email">{t("email")}</label>
                 <input type="email" id="email" bind:value={userForm.email} placeholder="Value" />
             </div>
 
             <div class="empty-space"></div>
 
             <div class="form-group">
-                <label for="birthday">Birthday</label>
+                <label for="birthday">{t("birthday")}</label>
                 <input type="text" id="birthday" bind:value={userForm.birthday} placeholder="Value" />
             </div>
 
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password">{t("password")}</label>
                 <input type="password" id="password" bind:value={userForm.password} placeholder="Value" />
             </div>
         </div>
 
         <div class="action-buttons">
             <button onclick={deleteUser} class="btn-delete">
-                Delete <i class="ti ti-trash"></i>
+                {t("deleteAccount")} <i class="ti ti-trash"></i>
             </button>
             <button onclick={saveUserSettings} class="btn-save">
-                Save <i class="ti ti-device-floppy"></i>
+                {t("save")} <i class="ti ti-device-floppy"></i>
             </button>
         </div>
     </div>

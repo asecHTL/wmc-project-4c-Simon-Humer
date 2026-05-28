@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { userData } from '$lib/shared/User.svelte';
+import { userData } from '$lib/shared/User.svelte.js';
 
 
 export async function load({ url, fetch }) {

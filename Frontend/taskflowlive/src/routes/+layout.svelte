@@ -48,7 +48,7 @@
       </div>
 
       <div class="user-block">
-        <button onclick={() => goto("/")}>Logout</button>
+        <button onclick={() => goto("/")}>{t("logout")}</button>
         <div class="avatar">MM</div>
         <span class="user-name">Max Mustermann</span>
       </div>

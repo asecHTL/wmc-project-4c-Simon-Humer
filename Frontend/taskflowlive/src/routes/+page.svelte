@@ -6,7 +6,7 @@
     let errorMessage = $state('');
     let isLoading = $state(false);
 
-    import { userData } from '$lib/shared/User.svelte';
+    import { userData } from '$lib/shared/User.svelte.js';
 
     async function handleLogin(event) {
         event.preventDefault();

@@ -1,35 +1,36 @@
 <script>
     import { onMount } from "svelte";
     import Chart from "chart.js/auto";
+    import { t } from "$lib/i18n/i18n.svelte.js";
 
     let { data } = $props();
 
-    const statusMeta = {
+    const statusMeta = $derived({
         Done: {
             icon: "✓",
             color: "#5bc4a0",
             bg: "#e0f5ed",
-            label: "Task completed",
+            label: t("taskCompleted"),
         },
         InProgress: {
             icon: "🕐",
             color: "#e6b84a",
             bg: "#fdf3d7",
-            label: "In Progress",
+            label: t("inProgress"),
         },
         OnHold: {
             icon: "⊠",
             color: "#e8924a",
             bg: "#fdebd7",
-            label: "On hold",
+            label: t("onHold"),
         },
         Overdue: {
             icon: "⊖",
             color: "#a07eda",
             bg: "#ede5f8",
-            label: "Overdue",
+            label: t("overdue"),
         },
-    };
+    });
 
     const priorityColors = {
         High: "#e05c5c",
@@ -87,7 +88,7 @@
                     tooltip: {
                         callbacks: {
                             label: (context) =>
-                                ` ${context.label}: ${context.raw} Tasks`,
+                                ` ${context.label}: ${context.raw} ${t("tasks")}`,
                         },
                     },
                 },
@@ -101,7 +102,7 @@
                     labels: progressLabels,
                     datasets: [
                         {
-                            label: "Anzahl Tasks",
+                            label: t("tasks"),
                             data: progressValues,
                             backgroundColor: "#5bc4a0",
                             borderRadius: 6,
@@ -170,6 +171,7 @@
         if (chartProgress) {
             chartProgress.data.labels = progressLabels;
             chartProgress.data.datasets[0].data = progressValues;
+            chartProgress.data.datasets[0].label = t("tasks");
             chartProgress.update();
         }
     });
@@ -178,12 +180,12 @@
 
 
 <div class="dashboard">
-    <h1>Dashboard</h1>
+    <h1>{t("dashboard")}</h1>
 
     <div class="grid">
         <!-- Up Next -->
         <div class="card">
-            <h2>Up Next</h2>
+            <h2>{t("upcomingTasks")}</h2>
             <ul class="task-list">
                 {#each data.upComingTasks as task}
                     <li class="task-item">
@@ -191,14 +193,14 @@
                         <span>{task.taskTitle}</span>
                     </li>
                 {:else}
-                    <li class="task-item muted">Keine Tasks gefunden.</li>
+                    <li class="task-item muted">{t("noTasksFound")}</li>
                 {/each}
             </ul>
         </div>
 
         <!-- Overview -->
         <div class="card">
-            <h2>Overview</h2>
+            <h2>{t("personalOverview")}</h2>
             <div class="overview-grid">
                 {#each data.overviewPersonalTasks as item}
                     {@const meta = statusMeta[item.status] ?? {
@@ -222,14 +224,14 @@
         </div>
 
         <div class="card">
-            <h2>Tasks by Priority</h2>
+            <h2>{t("tasksByPriority")}</h2>
             <div class="chart-wrapper">
                 <canvas bind:this={canvas}></canvas>
             </div>
         </div>
 
         <div class="card">
-            <h2>Tasks Progress</h2>
+            <h2>{t("doneTasks")}</h2>
             <div class="placeholder">
                 <canvas bind:this={canvasProgress}></canvas>
             </div>
