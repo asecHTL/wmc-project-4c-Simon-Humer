@@ -214,11 +214,10 @@ app.get('/dashboard/tasksByPriority/:userId', async (req, res) => {
         res.status(500).json({ error: 'Datenbankfehler', details: error.message });
     }
 });
-
 app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-
+        const { taskGraphDate } = req.query;
 
         const query = `
             SELECT taskClosed AS date, COUNT(*) AS count 
@@ -232,7 +231,34 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
 
         const tasksStatistic = await db.all(query, [userId]) || [];
 
+        if (taskGraphDate) {
+            let taskGraphDateTasksFiltered = [];
+            const currentDate = new Date();
+            let dateUntil = new Date();
 
+            switch (taskGraphDate) {
+                case '1W':
+                    dateUntil.setDate(currentDate.getDate() - 7);
+                    break;
+                case '1M':
+                    dateUntil.setMonth(currentDate.getMonth() - 1);
+                    break;
+                case '1Y':
+                    dateUntil.setFullYear(currentDate.getFullYear() - 1);
+                    break;
+                default:
+                    dateUntil = null; 
+            }
+
+            if (dateUntil) {
+                taskGraphDateTasksFiltered = tasksStatistic.filter(x => {
+                    const taskDate = new Date(x.date);
+                    return taskDate >= dateUntil;
+                });
+                
+                return res.json(taskGraphDateTasksFiltered);
+            }
+        }
 
         res.json(tasksStatistic);
 
