@@ -47,7 +47,7 @@ await db.exec(`
         taskDescription TEXT NOT NULL,
         taskPriority TEXT NOT NULL,
         taskEndDate DATE NOT NULL,
-        taskStatus Text not null,
+        taskStatus Text,
         taskClosed Date,
         fkUserId INTEGER NOT NULL,
         FOREIGN KEY (fkUserId) REFERENCES Users(userId)
@@ -397,14 +397,14 @@ app.put('/user/language/:userId', async (req, res) => {
 app.get('/teamUserTable/:userId', async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
-       
+
         const result = await db.all(`
             SELECT t.teamId, t.teamName, t.adminId
             FROM Team t 
             JOIN TeamUserTable tu ON t.teamId = tu.fkTeamId 
             WHERE tu.fkUserId = ?
         `, [userId]);
-        
+
         if (result) {
             return res.json(result);
         } else {
@@ -420,7 +420,7 @@ app.get('/team/:teamId', async (req, res) => {
     try {
         const teamId = parseInt(req.params.teamId);
         const result = await db.get('SELECT * FROM Team WHERE teamId = ?', [teamId]);
-        
+
         if (result) {
             return res.json(result);
         } else {
@@ -462,7 +462,7 @@ app.post('/team', async (req, res) => {
 app.post('/teamUserTable/:teamId', async (req, res) => {
     try {
         const teamId = parseInt(req.params.teamId);
-        const userId = parseInt(req.query.userId); 
+        const userId = parseInt(req.query.userId);
 
         if (!userId) {
             return res.status(400).send('userId is required');
@@ -501,7 +501,7 @@ app.get('/team/:teamId/members', async (req, res) => {
             JOIN TeamUserTable tu ON u.userId = tu.fkUserId
             WHERE tu.fkTeamId = ?
         `, [teamId]);
-        
+
         return res.json(members || []);
     } catch (error) {
         console.error(error);
@@ -527,6 +527,213 @@ app.delete('/team/:teamId', async (req, res) => {
         return res.status(500).json({ error: 'Datenbankfehler', details: error.message });
     }
 });
+
+
+// Get Prooject for user assigned
+
+
+app.get('/projects/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        const projects = await db.all(`
+            SELECT *
+            FROM Projects p
+            JOIN ProjectUserTable pu ON p.userId = pu.fkUserId
+           where fkUserId = ?
+        `, [userId]);
+
+        return res.json(projects || []);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+// Add Project
+
+app.post('/project/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+
+        const { projectName, projectPriority, projectEndDate }
+
+        if (!userId) {
+            return res.status(400).send('userId is required');
+        }
+
+        const result = await db.run(`
+                INSERT INTO Projects (projectName, projectPriority, projectEndDate) 
+                VALUES (?, ?, ?)
+            `, [projectName, projectPriority, projectEndDate]);
+
+
+        const projectId = result.lastID;
+
+        const result = await db.run(`
+                INSERT INTO ProjectUserTable (fkUserId, fkProjectId) 
+                VALUES (?, ?)
+            `, [userId, projectId]);
+
+
+        return res.json({ fkUserId: userId, fkProjectId: projectId });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+// Add users for existing Project
+
+
+app.post('/projectUserTable/:projectId', (req, res) => {
+    const { projectId } = req.params;
+    const { userId } = req.query;
+
+
+    try {
+        const userId = parseInt(req.params.userId);
+        const projectId = parseInt(req.params.projectId);
+
+
+
+        if (!projectId, !userId) {
+            return res.status(400).send('userId and or project Id is required');
+        }
+
+        const result = await db.run(`
+                INSERT INTO ProjectUserTable (fkProjectId, fkUserId) 
+                VALUES (?, ?)
+            `, [projectId, userId]);
+
+
+
+        return res.json({ fkUserId: userId, fkProjectId: projectId });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+// Delete Users for existing Project
+
+app.delete('/projectUserTable/:projectId', (req, res) => {
+    const { userId } = req.query;
+    const { projectId } = req.params;
+
+
+
+    try {
+        const result = await db.run('DELETE FROM ProjectUserTable WHERE userId = ? and projectId = ?', [userId, projectId]);
+
+        if (result.changes > 0) {
+            res.status(204).send();
+        } else {
+            res.status(404).send('User and or Proejct not found');
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+    }
+
+
+
+});
+// Add Sub Tasks for existing Porject
+
+app.post('/projectTaskTable/:projectId', async (req, res) => {
+    const { projectId } = req.params;
+    const { taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId } = req.body;
+
+    try {
+        const projectId = parseInt(req.params.projectId);
+
+
+
+        if (!projectId, !taskTitle, !taskDescription, !taskPriority, !taskEndDate, !fkUserId) {
+            return res.status(400).send('porject Id or other properites requiered!');
+        }
+
+        const result = await db.run(`
+                INSERT INTO Task (taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId) 
+                VALUES (?, ?, ?, ? ,?)
+            `, [taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId]);
+
+        const taskId = result.lastID;
+
+        const result = await db.run(`
+                INSERT INTO PorjectTaskTable (fkProjectId, fkTaskId) 
+                VALUES (?, ?)
+            `, [projectId, taskId]);
+
+
+
+        return res.json({ fkUserId: userId, fkProjectId: projectId });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
+// Delete Sub Task for existing Project
+
+
+app.delete('/projectTaskTable/:projectId', (req, res) => {
+    const { taskId } = req.query;
+    const { projectId } = req.params;
+
+
+
+    try {
+        const result = await db.run('DELETE FROM ProjectTaskTable WHERE prjectId = ? and taskId = ?', [projectId, taskId]);
+
+        if (result.changes > 0) {
+            res.status(204).send();
+        } else {
+            res.status(404).send('Task and or Proejct not found');
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+    }
+});
+
+// Project Overview for loggedin User
+
+app.get('/project/overview/:userId', (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const projects = await db.all(`
+            SELECT *
+            FROM Projects p
+            JOIN ProjectUserTable pu ON p.userId = pu.fkUserId
+           where fkUserId = ?
+        `, [userId]);
+
+
+        const statusOverview = [
+            { status: 'Done', count: 0 },
+            { status: 'InProgress', count: 0 },
+            { status: 'OnHold', count: 0 },
+            { status: 'Overdue', count: 0 },
+        ];
+
+        tasks.forEach(project => {
+            const entry = statusOverview.find(s => s.status === project.taskStatus);
+            if (entry) entry.count++;
+        });
+
+        res.json(statusOverview);
+
+    } catch (error) {
+        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+    }
+});
+
 
 
 
