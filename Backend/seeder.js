@@ -12,6 +12,93 @@ const db = await open({
     driver: sqlite3.Database
 });
 
+console.log('🧹 Dropping old tables to ensure schema matches...');
+await db.exec(`
+    DROP TABLE IF EXISTS ProjectTasksTable;
+    DROP TABLE IF EXISTS ProjectUserTable;
+    DROP TABLE IF EXISTS TeamUserTable;
+    DROP TABLE IF EXISTS Tasks;
+    DROP TABLE IF EXISTS Projects;
+    DROP TABLE IF EXISTS Team;
+    DROP TABLE IF EXISTS Users;
+`);
+
+console.log('🛠️ Creating tables...');
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS Users (
+        userId INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        firstname TEXT NOT NULL,
+        lastname TEXT NOT NULL,
+        birthday DATE,
+        language Text
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS Team (
+        teamId INTEGER PRIMARY KEY AUTOINCREMENT,
+        adminId Integer not null,
+        teamCreationDate Date not null
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS Projects (
+        projectId INTEGER PRIMARY KEY AUTOINCREMENT,
+        projectName TEXT NOT NULL,
+        projectPriority TEXT NOT NULL,
+        projectEndDate DATE NOT NULL,
+        fkTeamId Integer,
+        FOREIGN KEY (fkTeamId) REFERENCES Team(teamId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS Tasks (
+        taskId INTEGER PRIMARY KEY AUTOINCREMENT,
+        taskTitle TEXT NOT NULL,
+        taskDescription TEXT NOT NULL,
+        taskPriority TEXT NOT NULL,
+        taskEndDate DATE NOT NULL,
+        taskStatus Text not null,
+        taskClosed Date,
+        fkUserId INTEGER NOT NULL,
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS TeamUserTable (
+        teamUserId INTEGER PRIMARY KEY AUTOINCREMENT,
+        fkUserId Integer not null,
+        fkTeamId Integer not null,
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId),
+        FOREIGN KEY (fkTeamId) REFERENCES Team(teamId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS ProjectUserTable (
+        projectUserTableId INTEGER PRIMARY KEY AUTOINCREMENT,
+        fkProjectId INTEGER NOT NULL,
+        fkUserId INTEGER NOT NULL,
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId),
+        FOREIGN KEY (fkProjectId) REFERENCES Projects(projectId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS ProjectTasksTable (
+        ProjectTasksTableId INTEGER PRIMARY KEY AUTOINCREMENT,
+        fkProjectId INTEGER NOT NULL,
+        fkTaskId INTEGER NOT NULL,
+        FOREIGN KEY (fkProjectId) REFERENCES Projects(projectId),
+        FOREIGN KEY (fkTaskId) REFERENCES Tasks(taskId)
+    )
+`);
 
 const rawUsers = [
     { username: 'maxmuster',   email: 'max.muster@example.com',   password: 'Password1!', firstname: 'Max',      lastname: 'Mustermann', birthday: '1990-04-12' },
@@ -28,15 +115,48 @@ console.log('🌱 Seeding Users...');
 const userIds = [];
 for (const u of rawUsers) {
     const hashed = await bcrypt.hash(u.password, 10);
-    await db.run(
-        `INSERT OR IGNORE INTO Users (username, email, password, firstname, lastname, birthday)
+    const result = await db.run(
+        `INSERT INTO Users (username, email, password, firstname, lastname, birthday)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [u.username, u.email, hashed, u.firstname, u.lastname, u.birthday]
     );
-    const row = await db.get('SELECT userId FROM Users WHERE username = ?', [u.username]);
-    userIds.push(row.userId);
+    userIds.push(result.lastID);
 }
 console.log(`   ✓ ${userIds.length} Users`);
+
+
+console.log('🌱 Seeding Teams...');
+const teamIds = [];
+const teamData = [
+    { adminId: userIds[0], teamCreationDate: '2025-01-10' },
+    { adminId: userIds[2], teamCreationDate: '2025-02-15' },
+    { adminId: userIds[4], teamCreationDate: '2025-03-20' },
+];
+
+for (const t of teamData) {
+    const result = await db.run(
+        `INSERT INTO Team (adminId, teamCreationDate) VALUES (?, ?)`,
+        [t.adminId, t.teamCreationDate]
+    );
+    teamIds.push(result.lastID);
+}
+console.log(`   ✓ ${teamIds.length} Teams`);
+
+
+console.log('🌱 Seeding TeamUserTable...');
+let tuCount = 0;
+for (let i = 0; i < teamIds.length; i++) {
+    const tid = teamIds[i];
+    const members = userIds.slice(i * 2, (i * 2) + 4);
+    for (const uid of members) {
+        await db.run(
+            `INSERT INTO TeamUserTable (fkUserId, fkTeamId) VALUES (?, ?)`,
+            [uid, tid]
+        );
+        tuCount++;
+    }
+}
+console.log(`   ✓ ${tuCount} TeamUser assignments`);
 
 
 const projects = [
@@ -52,14 +172,16 @@ const projects = [
 
 console.log('🌱 Seeding Projects...');
 const projectIds = [];
-for (const p of projects) {
-    await db.run(
-        `INSERT OR IGNORE INTO Projects (projectName, projectPriority, projectEndDate)
-         VALUES (?, ?, ?)`,
-        [p.projectName, p.projectPriority, p.projectEndDate]
+for (let i = 0; i < projects.length; i++) {
+    const p = projects[i];
+    // Assign a team only to 75% of projects
+    const teamId = Math.random() > 0.25 ? teamIds[i % teamIds.length] : null;
+    const result = await db.run(
+        `INSERT INTO Projects (projectName, projectPriority, projectEndDate, fkTeamId)
+         VALUES (?, ?, ?, ?)`,
+        [p.projectName, p.projectPriority, p.projectEndDate, teamId]
     );
-    const row = await db.get('SELECT projectId FROM Projects WHERE projectName = ?', [p.projectName]);
-    projectIds.push(row.projectId);
+    projectIds.push(result.lastID);
 }
 console.log(`   ✓ ${projectIds.length} Projects`);
 

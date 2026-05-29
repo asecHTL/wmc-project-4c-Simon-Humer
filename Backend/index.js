@@ -33,7 +33,10 @@ await db.exec(`
         projectId INTEGER PRIMARY KEY AUTOINCREMENT,
         projectName TEXT NOT NULL,
         projectPriority TEXT NOT NULL,
-        projectEndDate DATE NOT NULL
+        projectEndDate DATE NOT NULL,
+        fkTeamId Integer,
+
+        FOREIGN KEY (fkTeamId) REFERENCES Team(teamId)
     )
 `);
 
@@ -48,6 +51,27 @@ await db.exec(`
         taskClosed Date,
         fkUserId INTEGER NOT NULL,
         FOREIGN KEY (fkUserId) REFERENCES Users(userId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS Team (
+        teamId INTEGER PRIMARY KEY AUTOINCREMENT,
+        adminId Integer not null,
+        teamCreationDate Date not null
+    
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS TeamUserTable (
+        teamUserId INTEGER PRIMARY KEY AUTOINCREMENT,
+        fkUserId Integer not null,
+        fkTeamId Integer not null,
+
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId),
+        FOREIGN KEY (fkTeamId) REFERENCES Team(teamId)
+
     )
 `);
 
@@ -232,7 +256,7 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
         if (taskGraphDate) {
             let taskGraphDateTasksFiltered = [];
             const currentDate = new Date();
-            currentDate.setHours(0, 0, 0, 0); 
+            currentDate.setHours(0, 0, 0, 0);
             let dateUntil = new Date(currentDate);
 
             switch (taskGraphDate) {
@@ -246,7 +270,7 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
                     dateUntil.setFullYear(currentDate.getFullYear() - 1);
                     break;
                 default:
-                    dateUntil = null; 
+                    dateUntil = null;
             }
 
             if (dateUntil) {
@@ -305,7 +329,7 @@ app.put('/profile/user/:userId', async (req, res) => {
         const userId = parseInt(req.params.userId);
 
         const user = await db.get('SELECT * FROM Users WHERE userId = ?', [userId]);
-        
+
         if (user) {
             const firstname = req.body.firstname || user.firstname;
             const lastname = req.body.lastname || user.lastname;
