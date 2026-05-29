@@ -57,6 +57,7 @@ await db.exec(`
 await db.exec(`
     CREATE TABLE IF NOT EXISTS Team (
         teamId INTEGER PRIMARY KEY AUTOINCREMENT,
+        teamName Text,
         adminId Integer not null,
         teamCreationDate Date not null
     
@@ -66,7 +67,7 @@ await db.exec(`
 await db.exec(`
     CREATE TABLE IF NOT EXISTS TeamUserTable (
         teamUserId INTEGER PRIMARY KEY AUTOINCREMENT,
-        fkUserId Integer not null,
+        fkUserId Integer,
         fkTeamId Integer not null,
 
         FOREIGN KEY (fkUserId) REFERENCES Users(userId),
@@ -381,6 +382,117 @@ app.put('/user/language/:userId', async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
+
+//Alle teamId's in denen der angemeldetet User gespeichert ist
+app.get('/teamUserTable/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        const result = await db.all('Select * from TeamUserTable where fkUserId = ?', [userId]);
+        if (result !== null) {
+            res.json(result);
+        } else {
+            res.status(404).send('TeamUser not found');
+
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
+//Team Details mithilfer der TeamId
+app.get('/team/:teamId',async (req,res)=>{
+    try {
+        const teamId = parseInt(req.params.teamId);
+        const result = await db.get('Select * from Team where teamId = ?', [teamId]);
+        if (result !== null) {
+            res.json(result);
+        } else {
+            res.status(404).send('Team not found');
+
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+//team erstellen
+app.post('/team',async (req,res)=>{
+    const { teamCreationDate, adminId, teamName } = req.body || {};
+
+    if (!teamCreationDate, !adminId, !teamName) {
+        return res.status(400).send('TeamDetails for creation of the team');
+    }
+
+    try {
+         const result = await db.run(`
+                INSERT INTO Team (teamCreationDate, adminId, teamName) 
+                VALUES (?, ?, ?)
+            `, [teamCreationDate, adminId, teamName]);
+
+           let teamId = result.lastID;
+       
+
+         await db.run(`
+                INSERT INTO TeamUserTable (fkTeamId) 
+                VALUES (?)
+            `, [teamId]);
+
+            return res.status(201).json({ teamCreationDate, adminId, teamName });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send('Internal Server Error');
+    }
+});
+
+//user in bereist existenez team einfügen
+app.post('/teamUserTable/:teamId',(req,res)=>{
+     try {
+        const teamId = parseInt(req.params.teamId);
+        const userId = parseInt(req.query.userId);
+
+        const team = await db.get('SELECT * FROM TeamUserTable WHERE fkTeamId = ?', [teamId]);
+
+        if (team) {
+            const result = await db.run(`
+                INSERT INTO TeamUserTable (fkUserId,fkTeamId) 
+                VALUES (?, ?)
+            `, [userId, teamId]);
+
+           let teamUserTableId = result.lastID;
+       
+            res.json({ teamUserTableId });
+        } else {
+            res.status(404).send('teamId not found');
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+//delete team
+app.delete('/team/:teamId', async(req,res)=>{
+const { teamId } = req.params;
+
+    try {
+        const result = await db.run('DELETE FROM Team WHERE teamId = ?', [teamId]);
+
+        if (result.changes > 0) {
+            res.status(204).send();
+        } else {
+            res.status(404).send('Team not found');
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+    }
+});
+
+
+
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);

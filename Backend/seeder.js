@@ -40,6 +40,7 @@ await db.exec(`
 await db.exec(`
     CREATE TABLE IF NOT EXISTS Team (
         teamId INTEGER PRIMARY KEY AUTOINCREMENT,
+        teamName Text,
         adminId Integer not null,
         teamCreationDate Date not null
     )
@@ -128,15 +129,15 @@ console.log(`   ✓ ${userIds.length} Users`);
 console.log('🌱 Seeding Teams...');
 const teamIds = [];
 const teamData = [
-    { adminId: userIds[0], teamCreationDate: '2025-01-10' },
-    { adminId: userIds[2], teamCreationDate: '2025-02-15' },
-    { adminId: userIds[4], teamCreationDate: '2025-03-20' },
+    { adminId: userIds[0],teamName: 'Team1', teamCreationDate: '2025-01-10' },
+    { adminId: userIds[2],teamName: 'Team2', teamCreationDate: '2025-02-15' },
+    { adminId: userIds[4],teamName: 'Team3', teamCreationDate: '2025-03-20' },
 ];
 
 for (const t of teamData) {
     const result = await db.run(
-        `INSERT INTO Team (adminId, teamCreationDate) VALUES (?, ?)`,
-        [t.adminId, t.teamCreationDate]
+        `INSERT INTO Team (adminId,teamName, teamCreationDate) VALUES (?, ?, ?)`,
+        [t.adminId,t.teamName, t.teamCreationDate]
     );
     teamIds.push(result.lastID);
 }
