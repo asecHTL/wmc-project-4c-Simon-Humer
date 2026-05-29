@@ -639,7 +639,6 @@ app.get('/project/overview/:userId', async (req, res) => {
             FROM Projects p
             JOIN ProjectUserTable pu ON p.projectId = pu.fkProjectId
             JOIN ProjectTasksTable pt ON p.projectId = pt.fkProjectId
-            JOIN Tasks t ON pt.fkTaskId = t.taskId
             WHERE pu.fkUserId = ?
         `, [userId]) || [];
 

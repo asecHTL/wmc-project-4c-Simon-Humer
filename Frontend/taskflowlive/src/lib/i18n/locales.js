@@ -41,7 +41,15 @@ export const locales = {
         teamMembers: "Team Members",
         selectTeam: "Select a team",
         noMembersFound: "No members found for this team.",
-        addTeamMember: "Add Team Member"
+        addTeamMember: "Add Team Member",
+        myProjects: "My Projects",
+        priority: "Priority",
+        dueDate: "Due Date",
+        noProjectsFound: "No projects found.",
+        totalProjects: "Total Projects",
+        highPriority: "High Priority",
+        mediumPriority: "Medium Priority",
+        lowPriority: "Low Priority"
     },
     de: {
         welcome: "Willkommen bei TaskFlow Live",
@@ -85,6 +93,14 @@ export const locales = {
         teamMembers: "Teammitglieder",
         selectTeam: "Wähle ein Team",
         noMembersFound: "Keine Mitglieder für dieses Team gefunden.",
-        addTeamMember: "Teammitglied hinzufügen"
+        addTeamMember: "Teammitglied hinzufügen",
+        myProjects: "Meine Projekte",
+        priority: "Priorität",
+        dueDate: "Fälligkeitsdatum",
+        noProjectsFound: "Keine Projekte gefunden.",
+        totalProjects: "Gesamtprojekte",
+        highPriority: "Hohe Priorität",
+        mediumPriority: "Mittlere Priorität",
+        lowPriority: "Niedrige Priorität"
     }
 };
