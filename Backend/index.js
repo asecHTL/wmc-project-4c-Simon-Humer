@@ -383,114 +383,118 @@ app.put('/user/language/:userId', async (req, res) => {
     }
 });
 
-//Alle teamId's in denen der angemeldetet User gespeichert ist
+
 app.get('/teamUserTable/:userId', async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
-        const result = await db.all('Select * from TeamUserTable where fkUserId = ?', [userId]);
-        if (result !== null) {
-            res.json(result);
+       
+        const result = await db.all('SELECT * FROM TeamUserTable WHERE fkUserId = ?', [userId]);
+        
+        if (result && result.length > 0) {
+            return res.json(result);
         } else {
-            res.status(404).send('TeamUser not found');
-
+            return res.status(404).send('No teams found for this user');
         }
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal Server Error" });
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-
-//Team Details mithilfer der TeamId
-app.get('/team/:teamId',async (req,res)=>{
+app.get('/team/:teamId', async (req, res) => {
     try {
         const teamId = parseInt(req.params.teamId);
-        const result = await db.get('Select * from Team where teamId = ?', [teamId]);
-        if (result !== null) {
-            res.json(result);
+        const result = await db.get('SELECT * FROM Team WHERE teamId = ?', [teamId]);
+        
+        if (result) {
+            return res.json(result);
         } else {
-            res.status(404).send('Team not found');
-
+            return res.status(404).send('Team not found');
         }
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal Server Error" });
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-//team erstellen
-app.post('/team',async (req,res)=>{
+app.post('/team', async (req, res) => {
     const { teamCreationDate, adminId, teamName } = req.body || {};
 
-    if (!teamCreationDate, !adminId, !teamName) {
-        return res.status(400).send('TeamDetails for creation of the team');
+    if (!teamCreationDate || !adminId || !teamName) {
+        return res.status(400).send('Missing TeamDetails for creation (teamCreationDate, adminId, teamName required)');
     }
 
     try {
-         const result = await db.run(`
-                INSERT INTO Team (teamCreationDate, adminId, teamName) 
-                VALUES (?, ?, ?)
-            `, [teamCreationDate, adminId, teamName]);
+        const result = await db.run(`
+            INSERT INTO Team (teamCreationDate, adminId, teamName) 
+            VALUES (?, ?, ?)
+        `, [teamCreationDate, adminId, teamName]);
 
-           let teamId = result.lastID;
-       
+        const teamId = result.lastID;
 
-         await db.run(`
-                INSERT INTO TeamUserTable (fkTeamId) 
-                VALUES (?)
-            `, [teamId]);
+        await db.run(`
+            INSERT INTO TeamUserTable (fkUserId, fkTeamId) 
+            VALUES (?, ?)
+        `, [adminId, teamId]);
 
-            return res.status(201).json({ teamCreationDate, adminId, teamName });
+        return res.status(201).json({ teamId, teamCreationDate, adminId, teamName });
     } catch (error) {
         console.error(error);
         return res.status(500).send('Internal Server Error');
     }
 });
 
-//user in bereist existenez team einfügen
-app.post('/teamUserTable/:teamId',(req,res)=>{
-     try {
+app.post('/teamUserTable/:teamId', async (req, res) => {
+    try {
         const teamId = parseInt(req.params.teamId);
-        const userId = parseInt(req.query.userId);
+        const userId = parseInt(req.query.userId); 
 
-        const team = await db.get('SELECT * FROM TeamUserTable WHERE fkTeamId = ?', [teamId]);
+        if (!userId) {
+            return res.status(400).send('userId is required');
+        }
 
-        if (team) {
+        const teamExists = await db.get('SELECT * FROM Team WHERE teamId = ?', [teamId]);
+
+        if (teamExists) {
+            const alreadyInTeam = await db.get('SELECT * FROM TeamUserTable WHERE fkUserId = ? AND fkTeamId = ?', [userId, teamId]);
+            if (alreadyInTeam) {
+                return res.status(409).send('User is already a member of this team');
+            }
+
             const result = await db.run(`
-                INSERT INTO TeamUserTable (fkUserId,fkTeamId) 
+                INSERT INTO TeamUserTable (fkUserId, fkTeamId) 
                 VALUES (?, ?)
             `, [userId, teamId]);
 
-           let teamUserTableId = result.lastID;
-       
-            res.json({ teamUserTableId });
+            let teamUserTableId = result.lastID;
+            return res.json({ teamUserTableId, fkUserId: userId, fkTeamId: teamId });
         } else {
-            res.status(404).send('teamId not found');
+            return res.status(404).send('teamId not found');
         }
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal Server Error" });
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-//delete team
-app.delete('/team/:teamId', async(req,res)=>{
-const { teamId } = req.params;
+app.delete('/team/:teamId', async (req, res) => {
+    const { teamId } = req.params;
 
     try {
+        await db.run('DELETE FROM TeamUserTable WHERE fkTeamId = ?', [teamId]);
+
         const result = await db.run('DELETE FROM Team WHERE teamId = ?', [teamId]);
 
         if (result.changes > 0) {
-            res.status(204).send();
+            return res.status(204).send();
         } else {
-            res.status(404).send('Team not found');
+            return res.status(404).send('Team not found');
         }
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Datenbankfehler', details: error.message });
+        return res.status(500).json({ error: 'Datenbankfehler', details: error.message });
     }
 });
-
 
 
 
