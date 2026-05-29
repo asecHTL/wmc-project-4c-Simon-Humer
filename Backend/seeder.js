@@ -129,15 +129,15 @@ console.log(`   ✓ ${userIds.length} Users`);
 console.log('🌱 Seeding Teams...');
 const teamIds = [];
 const teamData = [
-    { adminId: userIds[0],teamName: 'Team1', teamCreationDate: '2025-01-10' },
-    { adminId: userIds[2],teamName: 'Team2', teamCreationDate: '2025-02-15' },
-    { adminId: userIds[4],teamName: 'Team3', teamCreationDate: '2025-03-20' },
+    { adminId: userIds[0], teamName: 'Team1', teamCreationDate: '2025-01-10' },
+    { adminId: userIds[2], teamName: 'Team2', teamCreationDate: '2025-02-15' },
+    { adminId: userIds[4], teamName: 'Team3', teamCreationDate: '2025-03-20' },
 ];
 
 for (const t of teamData) {
     const result = await db.run(
-        `INSERT INTO Team (adminId,teamName, teamCreationDate) VALUES (?, ?, ?)`,
-        [t.adminId,t.teamName, t.teamCreationDate]
+        `INSERT INTO Team (adminId, teamName, teamCreationDate) VALUES (?, ?, ?)`,
+        [t.adminId, t.teamName, t.teamCreationDate]
     );
     teamIds.push(result.lastID);
 }
@@ -175,7 +175,6 @@ console.log('🌱 Seeding Projects...');
 const projectIds = [];
 for (let i = 0; i < projects.length; i++) {
     const p = projects[i];
-    // Assign a team only to 75% of projects
     const teamId = Math.random() > 0.25 ? teamIds[i % teamIds.length] : null;
     const result = await db.run(
         `INSERT INTO Projects (projectName, projectPriority, projectEndDate, fkTeamId)
@@ -187,15 +186,36 @@ for (let i = 0; i < projects.length; i++) {
 console.log(`   ✓ ${projectIds.length} Projects`);
 
 
+console.log('🌱 Seeding ProjectUserTable...');
+let puCount = 0;
+// Map, um schnell nachschlagen zu können, welche User in welchem Projekt arbeiten
+const projectUsersMap = new Map();
+
+for (let i = 0; i < projectIds.length; i++) {
+    const pid = projectIds[i];
+    const assigned = userIds.slice(0, (i % 4) + 2);
+    projectUsersMap.set(pid, assigned);
+
+    for (const uid of assigned) {
+        await db.run(
+            `INSERT INTO ProjectUserTable (fkProjectId, fkUserId) VALUES (?, ?)`,
+            [pid, uid]
+        );
+        puCount++;
+    }
+}
+console.log(`   ✓ ${puCount} ProjectUser assignments`);
+
+
 const taskTemplates = [
     { taskTitle: 'UI/UX Design Review',        taskDescription: 'Review the latest Figma mockups and provide feedback.',         taskPriority: 'High',   taskEndDate: '2026-05-10', defaultStatus: 'Done' },
     { taskTitle: 'Client Meeting Preparation',  taskDescription: 'Prepare agenda and slides for the upcoming client call.',      taskPriority: 'High',   taskEndDate: '2026-05-12', defaultStatus: 'Done' },
     { taskTitle: 'Project Review',              taskDescription: 'Conduct mid-sprint project review with the full team.',        taskPriority: 'Medium', taskEndDate: '2026-05-14', defaultStatus: 'Done' },
     { taskTitle: 'Write Unit Tests',            taskDescription: 'Add unit tests for the authentication module.',                taskPriority: 'Medium', taskEndDate: '2026-05-20', defaultStatus: 'InProgress' },
     { taskTitle: 'Database Schema Migration',   taskDescription: 'Migrate legacy schema to the new normalized structure.',       taskPriority: 'High',   taskEndDate: '2026-05-25', defaultStatus: 'InProgress' },
-    { taskTitle: 'Update API Documentation',    taskDescription: 'Update Swagger docs to reflect the latest endpoint changes.',  taskPriority: 'Low',    taskEndDate: '2026-03-01', defaultStatus: 'InProgress' },
+    { taskTitle: 'Update API Documentation',     taskDescription: 'Update Swagger docs to reflect the latest endpoint changes.',  taskPriority: 'Low',    taskEndDate: '2026-03-01', defaultStatus: 'InProgress' },
     { taskTitle: 'Performance Profiling',       taskDescription: 'Profile the dashboard load time and identify bottlenecks.',   taskPriority: 'Medium', taskEndDate: '2026-03-05', defaultStatus: 'OnHold' },
-    { taskTitle: 'Accessibility Audit',         taskDescription: 'Run WCAG 2.1 AA audit on all public-facing pages.',           taskPriority: 'Low',    taskEndDate: '2026-02-10', defaultStatus: 'OnHold' },
+    { taskTitle: 'Accessibility Audit',         taskDescription: 'Run WCAG 2.1 AA audit on all public-facing pages.',            taskPriority: 'Low',    taskEndDate: '2026-02-10', defaultStatus: 'OnHold' },
     { taskTitle: 'Integrate Payment Gateway',   taskDescription: 'Connect Stripe API for subscription billing.',                taskPriority: 'High',   taskEndDate: '2026-04-30', defaultStatus: 'Overdue' },
     { taskTitle: 'Fix Login Redirect Bug',      taskDescription: 'Users are not being redirected correctly after OAuth login.', taskPriority: 'High',   taskEndDate: '2026-04-28', defaultStatus: 'Overdue' },
     { taskTitle: 'Deploy Staging Environment',  taskDescription: 'Set up Docker-based staging server on AWS EC2.',              taskPriority: 'Medium', taskEndDate: '2026-05-18', defaultStatus: 'Done' },
@@ -205,15 +225,24 @@ const taskTemplates = [
     { taskTitle: 'Refactor State Management',   taskDescription: 'Replace Redux with Zustand in the frontend app.',             taskPriority: 'Medium', taskEndDate: '2026-01-01', defaultStatus: 'InProgress' },
 ];
 
-console.log('🌱 Seeding Tasks...');
-const taskIds = [];
+console.log('🌱 Seeding Tasks & ProjectTasksTable...');
+let totalTasksCount = 0;
+let ptCount = 0;
 
-for (const u of userIds) {
-    const numberOfTasksForUser = Math.floor(Math.random() * 51) + 50;
+// Wir gehen durch jedes Projekt durch
+for (const pid of projectIds) {
+    // Hole die User, die diesem Projekt zugewiesen sind
+    const assignedUsers = projectUsersMap.get(pid) || [];
+    
+    // Jedes Projekt bekommt zwischen 5 und 15 Subtasks zugewiesen
+    const subTasksForProject = Math.floor(Math.random() * 11) + 5;
 
-    for (let i = 0; i < numberOfTasksForUser; i++) {
+    for (let j = 0; j < subTasksForProject; j++) {
         const randomTemplate = taskTemplates[Math.floor(Math.random() * taskTemplates.length)];
         
+        // Wähle zufällig einen User aus, der am Projekt arbeitet, um ihm den Task zuzuweisen
+        const assignedUser = assignedUsers[Math.floor(Math.random() * assignedUsers.length)];
+
         let currentStatus = randomTemplate.defaultStatus;
         let taskClosedValue = null;
 
@@ -234,7 +263,8 @@ for (const u of userIds) {
             taskClosedValue = taskDate.toISOString().split('T')[0];
         }
 
-        const result = await db.run(
+        // 1. Task in der Haupttabelle anlegen (zugewiesen an den User)
+        const resultTask = await db.run(
             `INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, taskClosed, fkUserId)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
@@ -244,44 +274,23 @@ for (const u of userIds) {
                 randomTemplate.taskEndDate, 
                 currentStatus, 
                 taskClosedValue, 
-                u
+                assignedUser
             ]
         );
-        taskIds.push(result.lastID);
-    }
-}
-console.log(`   ✓ ${taskIds.length} Gesamt-Tasks verteilt generiert.`);
+        const newTaskId = resultTask.lastID;
+        totalTasksCount++;
 
-
-console.log('🌱 Seeding ProjectUserTable...');
-let puCount = 0;
-for (let i = 0; i < projectIds.length; i++) {
-    const assigned = userIds.slice(0, (i % 4) + 2);
-    for (const uid of assigned) {
-        await db.run(
-            `INSERT INTO ProjectUserTable (fkProjectId, fkUserId) VALUES (?, ?)`,
-            [projectIds[i], uid]
-        );
-        puCount++;
-    }
-}
-console.log(`   ✓ ${puCount} ProjectUser assignments`);
-
-
-console.log('🌱 Seeding ProjectTasksTable...');
-let ptCount = 0;
-for (let i = 0; i < projectIds.length; i++) {
-    const start = (i * 6) % taskIds.length;
-    for (let j = 0; j < 6; j++) {
-        const tid = taskIds[(start + j) % taskIds.length];
+        // 2. Task als Subtask in die ProjectTasksTable eintragen
         await db.run(
             `INSERT INTO ProjectTasksTable (fkProjectId, fkTaskId) VALUES (?, ?)`,
-            [projectIds[i], tid]
+            [pid, newTaskId]
         );
         ptCount++;
     }
 }
-console.log(`   ✓ ${ptCount} ProjectTask assignments`);
+
+console.log(`   ✓ ${totalTasksCount} Tasks generiert und erfolgreich als Projektsubtasks verknüpft.`);
+console.log(`   ✓ ${ptCount} ProjectTask-Relationen erstellt.`);
 
 console.log('\n✅ Database seeding complete!');
 await db.close();
