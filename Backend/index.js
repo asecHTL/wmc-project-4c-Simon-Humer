@@ -110,6 +110,16 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.get('/users', async (req, res) => {
+    try {
+        const users = await db.all('SELECT userId, firstname, lastname, email, username FROM Users');
+        return res.json(users || []);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
 app.post('/user/register', async (req, res) => {
     const { username, email, password, firstname, lastname } = req.body || {};
 
@@ -388,12 +398,17 @@ app.get('/teamUserTable/:userId', async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
        
-        const result = await db.all('SELECT * FROM TeamUserTable WHERE fkUserId = ?', [userId]);
+        const result = await db.all(`
+            SELECT t.teamId, t.teamName, t.adminId
+            FROM Team t 
+            JOIN TeamUserTable tu ON t.teamId = tu.fkTeamId 
+            WHERE tu.fkUserId = ?
+        `, [userId]);
         
-        if (result && result.length > 0) {
+        if (result) {
             return res.json(result);
         } else {
-            return res.status(404).send('No teams found for this user');
+            return res.json([]);
         }
     } catch (error) {
         console.error(error);
@@ -471,6 +486,23 @@ app.post('/teamUserTable/:teamId', async (req, res) => {
         } else {
             return res.status(404).send('teamId not found');
         }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+app.get('/team/:teamId/members', async (req, res) => {
+    try {
+        const teamId = parseInt(req.params.teamId);
+        const members = await db.all(`
+            SELECT u.userId, u.firstname, u.lastname, u.email, u.username
+            FROM Users u
+            JOIN TeamUserTable tu ON u.userId = tu.fkUserId
+            WHERE tu.fkTeamId = ?
+        `, [teamId]);
+        
+        return res.json(members || []);
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: "Internal Server Error" });

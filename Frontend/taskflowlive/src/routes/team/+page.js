@@ -1,7 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { userData } from '$lib/shared/User.svelte.js';
 
-
 export async function load({ url, fetch }) {
     const userId = url.searchParams.get('userId') || userData.userId;
 
@@ -10,17 +9,13 @@ export async function load({ url, fetch }) {
     }
 
     try {
-        const res = await fetch(`http://localhost:3000/profile/user/${userId}`);
+        const response = await fetch(`http://localhost:3000/teamUserTable/${userId}`);
+        const teamsForUser = await response.json();
 
-        if (!res.ok) {
-            const message = await res.text();
-            throw error(res.status, message || 'Failed to fetch user profile');
-        }
-
-        const user = await res.json();
-        return { user };
+        return {teamsForUser};
     } catch (e) {
         if (e.status) throw e;
+        console.error('Dashboard load error:', e);
         throw error(500, 'Internal Server Error');
     }
 }

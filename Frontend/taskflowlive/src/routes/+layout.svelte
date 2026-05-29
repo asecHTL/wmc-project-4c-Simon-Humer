@@ -9,11 +9,11 @@
   let { children } = $props();
 
   const links = $derived([
-    { href: "/dashboard", label: t("dashboard") || "Dashboard", icon: "ti-layout-dashboard" },
-    { href: "/projects", label: t("projects") || "Projects", icon: "ti-folder" },
-    { href: "/tasks", label: t("tasks") || "Tasks", icon: "ti-checkbox" },
-    { href: "/team", label: t("team") || "Team", icon: "ti-users" },
-    { href: "/settings", label: t("settings") || "Settings", icon: "ti-settings" },
+    { href: `/dashboard?userId=${userData.userId}`, label: t("dashboard") || "Dashboard", icon: "ti-layout-dashboard" },
+    { href: `/projects?userId=${userData.userId}`, label: t("projects") || "Projects", icon: "ti-folder" },
+    { href: `/tasks?userId=${userData.userId}`, label: t("tasks") || "Tasks", icon: "ti-checkbox" },
+    { href: `/team?userId=${userData.userId}`, label: t("team") || "Team", icon: "ti-users" },
+    { href: `/settings?userId=${userData.userId}`, label: t("settings") || "Settings", icon: "ti-settings" },
   ]);
 
   let isLoginPage = $derived($page.url.pathname === "/");
@@ -67,7 +67,11 @@
       </div>
 
       <div class="user-block">
-        <button onclick={() => goto("/")}>{t("logout")}</button>
+        <button onclick={() => {
+            userData.userId = 0;
+            if (typeof window !== 'undefined') localStorage.removeItem('userId');
+            goto("/");
+        }}>{t("logout")}</button>
         <div class="avatar">MM</div>
         <span class="user-name">Max Mustermann</span>
       </div>

@@ -35,7 +35,13 @@ export const locales = {
         noTasksFound: "No tasks found",
         week: "Week",
         month: "Month",
-        year: "Year"
+        year: "Year",
+        teamSelection: "Team Selection",
+        addMember: "Add Member",
+        teamMembers: "Team Members",
+        selectTeam: "Select a team",
+        noMembersFound: "No members found for this team.",
+        addTeamMember: "Add Team Member"
     },
     de: {
         welcome: "Willkommen bei TaskFlow Live",
@@ -73,6 +79,12 @@ export const locales = {
         noTasksFound: "Keine Aufgaben gefunden",
         week: "Woche",
         month: "Monat",
-        year: "Jahr"
+        year: "Jahr",
+        teamSelection: "Teamauswahl",
+        addMember: "Mitglied hinzufügen",
+        teamMembers: "Teammitglieder",
+        selectTeam: "Wähle ein Team",
+        noMembersFound: "Keine Mitglieder für dieses Team gefunden.",
+        addTeamMember: "Teammitglied hinzufügen"
     }
 };

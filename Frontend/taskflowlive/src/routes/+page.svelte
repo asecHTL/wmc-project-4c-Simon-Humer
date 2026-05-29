@@ -35,6 +35,9 @@
                 console.log('Login erfolgreich:', user);
                 
                 userData.userId = user.userId
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('userId', user.userId);
+                }
                 if (user.language) {
                     setLanguage(user.language);
                 }
