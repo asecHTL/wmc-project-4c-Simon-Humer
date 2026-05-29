@@ -34,6 +34,7 @@ await db.exec(`
         projectName TEXT NOT NULL,
         projectPriority TEXT NOT NULL,
         projectEndDate DATE NOT NULL,
+        projectStatus Text not null,
         fkTeamId Integer,
         FOREIGN KEY (fkTeamId) REFERENCES Team(teamId)
     )
@@ -514,16 +515,16 @@ app.get('/projects/:userId', async (req, res) => {
 app.post('/project/:userId', async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
-        const { projectName, projectPriority, projectEndDate } = req.body || {};
+        const { projectName, projectPriority, projectEndDate, projectStatus, fkTeamId } = req.body || {};
 
         if (!userId || !projectName) {
             return res.status(400).send('userId and projectName are required');
         }
 
         const resultProject = await db.run(`
-            INSERT INTO Projects (projectName, projectPriority, projectEndDate) 
-            VALUES (?, ?, ?)
-        `, [projectName, projectPriority, projectEndDate]);
+            INSERT INTO Projects (projectName, projectPriority, projectEndDate, projectStatus, fkTeamId) 
+            VALUES (?, ?, ?, ?, ?)
+        `, [projectName, projectPriority, projectEndDate, projectStatus || 'InProgress', fkTeamId]);
 
         const projectId = resultProject.lastID;
 
@@ -635,10 +636,9 @@ app.get('/project/overview/:userId', async (req, res) => {
         const userId = parseInt(req.params.userId);
 
         const projects = await db.all(`
-            SELECT t.taskStatus
+            SELECT p.projectStatus
             FROM Projects p
             JOIN ProjectUserTable pu ON p.projectId = pu.fkProjectId
-            JOIN ProjectTasksTable pt ON p.projectId = pt.fkProjectId
             WHERE pu.fkUserId = ?
         `, [userId]) || [];
 
@@ -650,7 +650,7 @@ app.get('/project/overview/:userId', async (req, res) => {
         ];
 
         projects.forEach(p => {
-            const entry = statusOverview.find(s => s.status === p.taskStatus);
+            const entry = statusOverview.find(s => s.status === p.projectStatus);
             if (entry) entry.count++;
         });
 

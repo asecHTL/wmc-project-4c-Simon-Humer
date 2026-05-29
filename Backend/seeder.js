@@ -52,6 +52,7 @@ await db.exec(`
         projectName TEXT NOT NULL,
         projectPriority TEXT NOT NULL,
         projectEndDate DATE NOT NULL,
+        projectStatus Text not null,
         fkTeamId Integer,
         FOREIGN KEY (fkTeamId) REFERENCES Team(teamId)
     )
@@ -176,10 +177,30 @@ const projectIds = [];
 for (let i = 0; i < projects.length; i++) {
     const p = projects[i];
     const teamId = Math.random() > 0.25 ? teamIds[i % teamIds.length] : null;
+    
+    // Dynamische Statusbestimmung für Projekte
+    let projectStatus = 'InProgress';
+    const today = new Date();
+    const endDate = new Date(p.projectEndDate);
+
+    if (endDate < today) {
+        // Wenn das Enddatum in der Vergangenheit liegt
+        projectStatus = Math.random() > 0.3 ? 'Done' : 'Overdue';
+    } else {
+        // Wenn das Enddatum in der Zukunft liegt
+        projectStatus = Math.random() > 0.2 ? 'InProgress' : 'OnHold';
+    }
+
+    // Zusätzlicher Zufallsfaktor, um sicherzustellen, dass definitiv alle Stati vorkommen
+    if (i === 0) projectStatus = 'Done';
+    if (i === 1) projectStatus = 'Overdue';
+    if (i === 2) projectStatus = 'OnHold';
+    if (i === 3) projectStatus = 'InProgress';
+
     const result = await db.run(
-        `INSERT INTO Projects (projectName, projectPriority, projectEndDate, fkTeamId)
-         VALUES (?, ?, ?, ?)`,
-        [p.projectName, p.projectPriority, p.projectEndDate, teamId]
+        `INSERT INTO Projects (projectName, projectPriority, projectEndDate, projectStatus, fkTeamId)
+         VALUES (?, ?, ?, ?, ?)`,
+        [p.projectName, p.projectPriority, p.projectEndDate, projectStatus, teamId]
     );
     projectIds.push(result.lastID);
 }
