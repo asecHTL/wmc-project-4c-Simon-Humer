@@ -22,6 +22,11 @@
         contributorId: "",
     });
     let projectStarted = $state(false);
+    let selectedProjectId = $state(null);
+    let editingTask = $state(null);
+    let showDialog = $state(false);
+    let projectMembers = $state([]);
+    let isTaskFormOpen = $state(true);
 
     let overview = $state([
         { status: "Done", count: 0 },
@@ -29,6 +34,71 @@
         { status: "OnHold", count: 0 },
         { status: "Overdue", count: 0 },
     ]);
+
+    async function selectProject(project) {
+        selectedProjectId = project.projectId;
+        newProject = {
+            projectName: project.projectName,
+            projectPriority: project.projectPriority,
+            projectEndDate: project.projectEndDate,
+        };
+        selectedTeamId = project.fkTeamId || "";
+        projectStarted = true;
+        isTaskFormOpen = false;
+        
+        if (selectedTeamId) await fetchTeamMembers(selectedTeamId);
+        
+        try {
+            const [tasksRes, membersRes] = await Promise.all([
+                fetch(`http://localhost:3000/projectTaskTable/${project.projectId}`),
+                fetch(`http://localhost:3000/project/${project.projectId}/members`)
+            ]);
+            if (tasksRes.ok) subtasks = await tasksRes.json();
+            if (membersRes.ok) projectMembers = await membersRes.json();
+        } catch (e) { console.error(e); }
+    }
+
+    async function removeProjectMember(memberId) {
+        if (!confirm("Remove this member from project?")) return;
+        try {
+            const res = await fetch(`http://localhost:3000/projectUserTable/${selectedProjectId}?userId=${memberId}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                projectMembers = projectMembers.filter(m => m.userId !== memberId);
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    function openEditTask(task) {
+        editingTask = { ...task };
+        showDialog = true;
+    }
+
+    async function saveEditedTask() {
+        try {
+            const res = await fetch(`http://localhost:3000/task/${editingTask.taskId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(editingTask)
+            });
+            if (res.ok) {
+                subtasks = subtasks.map(t => t.taskId === editingTask.taskId ? editingTask : t);
+                showDialog = false;
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function deleteTask() {
+        if (!confirm("Are you sure?")) return;
+        try {
+            const res = await fetch(`http://localhost:3000/task/${editingTask.taskId}`, { method: 'DELETE' });
+            if (res.ok) {
+                subtasks = subtasks.filter(t => t.taskId !== editingTask.taskId);
+                showDialog = false;
+            }
+        } catch (e) { console.error(e); }
+    }
 
     async function fetchOverview() {
         if (!userData.userId) return;
@@ -102,42 +172,52 @@
 
     async function submitProject() {
         if (!newProject.projectName) return;
-        console.log("Submitting project...", { ...newProject, fkTeamId: selectedTeamId });
+        
+        const isUpdate = !!selectedProjectId;
+        const url = isUpdate 
+            ? `http://localhost:3000/project/${selectedProjectId}`
+            : `http://localhost:3000/project/${userData.userId}`;
+        const method = isUpdate ? 'PUT' : 'POST';
+
+        console.log(`${isUpdate ? 'Updating' : 'Creating'} project...`, { ...newProject, fkTeamId: selectedTeamId });
+        
         try {
-            const res = await fetch(
-                `http://localhost:3000/project/${userData.userId}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ...newProject, fkTeamId: selectedTeamId }),
-                },
-            );
+            const res = await fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ...newProject, fkTeamId: selectedTeamId }),
+            });
 
             if (!res.ok) {
                 const errorData = await res.json();
-                console.error("Project creation failed:", errorData);
+                console.error("Project action failed:", errorData);
                 return;
             }
 
-            const { fkProjectId } = await res.json();
-            console.log("Project created with ID:", fkProjectId);
+            const data = await res.json();
+            const projectId = isUpdate ? selectedProjectId : data.fkProjectId;
+            console.log(`Project ${isUpdate ? 'updated' : 'created'} with ID:`, projectId);
 
             for (const m of selectedMembers) {
-                await fetch(
-                    `http://localhost:3000/projectUserTable/${fkProjectId}?userId=${m.userId}`,
-                    { method: "POST" },
-                );
+                if (!projectMembers.some(pm => pm.userId === m.userId)) {
+                    await fetch(
+                        `http://localhost:3000/projectUserTable/${projectId}?userId=${m.userId}`,
+                        { method: "POST" },
+                    );
+                }
             }
 
             for (const s of subtasks) {
-                await fetch(
-                    `http://localhost:3000/projectTaskTable/${fkProjectId}`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ ...s, fkUserId: s.contributorId }),
-                    },
-                );
+                if (!s.taskId) {
+                    await fetch(
+                        `http://localhost:3000/projectTaskTable/${projectId}`,
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ ...s, fkUserId: s.contributorId }),
+                        },
+                    );
+                }
             }
             window.location.reload();
         } catch (error) {
@@ -155,7 +235,11 @@
                 <h2>{t("myProjects")}</h2>
                 <ul class="styled-list">
                     {#each projects as p}
-                        <li>
+                        <li 
+                            onclick={() => selectProject(p)} 
+                            class="clickable-project" 
+                            class:selected={selectedProjectId === p.projectId}
+                        >
                             <span class="project-icon">📁</span>
                             <span class="project-name">{p.projectName}</span>
                         </li>
@@ -219,78 +303,102 @@
 
                 <div class="column">
                     <h3>Members</h3>
-                    <div class="members-grid">
-                        {#each teamMembers as member}
-                            <button
-                                class="member-chip"
-                                class:selected={selectedMembers.find(
-                                    (m) => m.userId === member.userId,
-                                )}
-                                onclick={() => toggleMember(member)}
-                            >
-                                <span class="avatar"
-                                    >{member.firstname[0]}{member
-                                        .lastname[0]}</span
+                    {#if selectedProjectId}
+                        <div class="current-members">
+                            <h4>Current Members</h4>
+                            <div class="members-grid">
+                                {#each projectMembers as member}
+                                    <button class="member-chip active" onclick={() => removeProjectMember(member.userId)}>
+                                        <span class="avatar">{member.firstname[0]}{member.lastname[0]}</span>
+                                        {member.firstname} {member.lastname} (✖)
+                                    </button>
+                                {/each}
+                            </div>
+                        </div>
+                    {/if}
+                    
+                    <div class="team-members-selection">
+                        <h4>Add from Team</h4>
+                        <div class="members-grid">
+                            {#each teamMembers as member}
+                                <button
+                                    class="member-chip"
+                                    class:selected={selectedMembers.find(
+                                        (m) => m.userId === member.userId,
+                                    )}
+                                    onclick={() => toggleMember(member)}
                                 >
-                                {member.firstname}
-                                {member.lastname}
-                            </button>
-                        {/each}
+                                    <span class="avatar"
+                                        >{member.firstname[0]}{member
+                                            .lastname[0]}</span
+                                    >
+                                    {member.firstname}
+                                    {member.lastname}
+                                </button>
+                            {/each}
+                        </div>
                     </div>
                 </div>
 
                 <div class="column">
-                    <h3>Subtasks</h3>
-                    <div
-                        class="input-group"
-                        class:disabled-group={!projectStarted}
-                    >
-                        <input
-                            placeholder="Task Title"
-                            bind:value={newSubtask.taskTitle}
-                            disabled={!projectStarted}
-                        />
-                        <input
-                            placeholder="Task Description"
-                            bind:value={newSubtask.taskDescription}
-                            disabled={!projectStarted}
-                        />
-                        <select 
-                            bind:value={newSubtask.taskPriority} 
-                            disabled={!projectStarted}
-                        >
-                            <option value="High">High</option>
-                            <option value="Medium">Medium</option>
-                            <option value="Low">Low</option>
-                        </select>
-
-                        <input
-                            type="date"
-                            bind:value={newSubtask.taskEndDate}
-                            disabled={!projectStarted}
-                        />
-
-                        <select
-                            bind:value={newSubtask.contributorId}
-                            disabled={!projectStarted}
-                        >
-                            <option value="">Select Contributor</option>
-                            {#each selectedMembers as m}<option value={m.userId}
-                                    >{m.firstname}</option
-                                >{/each}
-                        </select>
-                        <button
-                            class="btn btn-secondary compact"
-                            onclick={addSubtask}
-                            disabled={!projectStarted}
-                        >
-                            + Add Sub Task
-                        </button>
+                    <div class="section-header">
+                        <h3>Subtasks</h3>
+                        {#if selectedProjectId}
+                            <button class="btn-toggle" onclick={() => isTaskFormOpen = !isTaskFormOpen}>
+                                {isTaskFormOpen ? 'Collapse Form ▴' : 'Add New Task ▾'}
+                            </button>
+                        {/if}
                     </div>
+                    
+                    {#if isTaskFormOpen || !selectedProjectId}
+                        <div class="input-group" class:disabled-group={!projectStarted}>
+                            <input
+                                placeholder="Task Title"
+                                bind:value={newSubtask.taskTitle}
+                                disabled={!projectStarted}
+                            />
+                            <input
+                                placeholder="Task Description"
+                                bind:value={newSubtask.taskDescription}
+                                disabled={!projectStarted}
+                            />
+                            <select 
+                                bind:value={newSubtask.taskPriority} 
+                                disabled={!projectStarted}
+                            >
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
 
-                    <ul class="subtask-preview-list">
+                            <input
+                                type="date"
+                                bind:value={newSubtask.taskEndDate}
+                                disabled={!projectStarted}
+                            />
+
+                            <select
+                                bind:value={newSubtask.contributorId}
+                                disabled={!projectStarted}
+                            >
+                                <option value="">Select Contributor</option>
+                                {#each [...projectMembers, ...selectedMembers.filter(sm => !projectMembers.some(pm => pm.userId === sm.userId))] as m}
+                                    <option value={m.userId}>{m.firstname}</option>
+                                {/each}
+                            </select>
+                            <button
+                                class="btn btn-secondary compact"
+                                onclick={addSubtask}
+                                disabled={!projectStarted}
+                            >
+                                + Add Sub Task
+                            </button>
+                        </div>
+                    {/if}
+
+                    <ul class="subtask-preview-list" class:expanded-list={!isTaskFormOpen}>
                         {#each subtasks as s}
-                            <li>🔑 {s.taskTitle} ({s.taskPriority}) - {s.taskEndDate}</li>
+                            <li onclick={() => openEditTask(s)} class="clickable-task">🔑 {s.taskTitle} ({s.taskPriority}) - {s.taskEndDate}</li>
                         {/each}
                     </ul>
                 </div>
@@ -304,6 +412,40 @@
         </div>
     </div>
 </div>
+
+{#if showDialog}
+    <div class="dialog-overlay">
+        <div class="dialog-card">
+            <h2>Edit Subtask</h2>
+            <div class="input-group">
+                <label>Title</label>
+                <input bind:value={editingTask.taskTitle} />
+                <label>Description</label>
+                <input bind:value={editingTask.taskDescription} />
+                <label>Priority</label>
+                <select bind:value={editingTask.taskPriority}>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                </select>
+                <label>End Date</label>
+                <input type="date" bind:value={editingTask.taskEndDate} />
+                <label>Status</label>
+                <select bind:value={editingTask.taskStatus}>
+                    <option value="InProgress">InProgress</option>
+                    <option value="Done">Done</option>
+                    <option value="OnHold">OnHold</option>
+                    <option value="Overdue">Overdue</option>
+                </select>
+            </div>
+            <div class="dialog-actions">
+                <button class="btn btn-secondary" onclick={() => showDialog = false}>Cancel</button>
+                <button class="btn btn-danger" onclick={deleteTask}>Delete</button>
+                <button class="btn btn-primary" onclick={saveEditedTask}>Save</button>
+            </div>
+        </div>
+    </div>
+{/if}
 
 <style>
     /* Global Container Setup */
@@ -633,4 +775,127 @@
         min-width: 150px;
         padding: 0.75rem 1.5rem;
     }
+
+    .clickable-project, .clickable-task {
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+
+    .clickable-project:hover, .clickable-task:hover {
+        transform: translateX(4px);
+        background: #f1f5f9 !important;
+    }
+
+    .clickable-project.selected {
+        border-color: #7f77dd;
+        background: #eef2ff !important;
+    }
+
+    .dialog-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .dialog-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 500px;
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+
+    .dialog-card h2 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 0.5rem;
+    }
+
+    .dialog-card label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #64748b;
+        margin-top: 0.5rem;
+    }
+
+    .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+        border-top: 1px solid #eee;
+        padding-top: 1rem;
+    }
+
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #dc2626;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .btn-toggle {
+        background: none;
+        border: none;
+        color: #7f77dd;
+        font-weight: 600;
+        font-size: 0.8rem;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+
+    .btn-toggle:hover {
+        background: #eef2ff;
+    }
+
+    .expanded-list {
+        max-height: 250px !important;
+    }
+
+    .current-members {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px dashed #e2e8f0;
+    }
+
+    .current-members h4, .team-members-selection h4 {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .member-chip.active {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+        color: #166534;
+    }
+
+    .member-chip.active:hover {
+        background: #fee2e2;
+        border-color: #fecaca;
+        color: #991b1b;
+    }
 </style>
+
