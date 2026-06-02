@@ -826,6 +826,29 @@ app.put('/project/:projectId', async (req, res) => {
     }
 });
 
+
+app.post('/taskHistoryTable/:taskId',async (req, res) => {
+    const taskId = parseInt(req.params.taskId);
+    const { historyText, historyDate } = req.body || {};
+
+    if (!taskId || !historyDate || !historyText) {
+        return res.status(400).send('taskId, historyDate, historyText are required');
+    }
+
+    try {
+        const resultTaskHistory = await db.run(`
+            INSERT INTO TaskHistory (historyText, historyDate) 
+            VALUES (?, ?)
+        `, [historyText, historyDate]);
+
+        const taskHistoryId = resultTaskHistory.lastID;
+        return res.status(201).json({ taskHistoryId, historyText, historyDate});
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+})
+
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
 });
