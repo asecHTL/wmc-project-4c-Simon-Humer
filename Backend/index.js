@@ -715,6 +715,27 @@ app.get('/projectTaskTable/:projectId', async (req, res) => {
     }
 });
 
+app.post('/task', async (req, res) => {
+    const { taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId } = req.body;
+
+    if (!taskTitle || !taskDescription || !taskPriority || !taskEndDate || !fkUserId) {
+        return res.status(400).send('Missing properties required for Task creation!');
+    }
+
+    try {
+        const resultTask = await db.run(`
+            INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus || 'toDo', fkUserId]);
+
+        const taskId = resultTask.lastID;
+        return res.status(201).json({ taskId, taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus: taskStatus || 'toDo', fkUserId });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
 app.put('/task/:taskId', async (req, res) => {
     try {
         const taskId = parseInt(req.params.taskId);
