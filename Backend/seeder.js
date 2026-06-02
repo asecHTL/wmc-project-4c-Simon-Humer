@@ -18,6 +18,7 @@ await db.exec(`
     DROP TABLE IF EXISTS ProjectUserTable;
     DROP TABLE IF EXISTS TeamUserTable;
     DROP TABLE IF EXISTS Tasks;
+    DROP TABLE IF EXISTS TaskHistory;
     DROP TABLE IF EXISTS Projects;
     DROP TABLE IF EXISTS Team;
     DROP TABLE IF EXISTS Users;
@@ -59,16 +60,26 @@ await db.exec(`
 `);
 
 await db.exec(`
+    CREATE TABLE IF NOT EXISTS TaskHistory (
+        taskHistoryId INTEGER PRIMARY KEY AUTOINCREMENT,
+        historyText Text not null,
+        historyDate Integer not null
+    )
+`);
+
+await db.exec(`
     CREATE TABLE IF NOT EXISTS Tasks (
         taskId INTEGER PRIMARY KEY AUTOINCREMENT,
         taskTitle TEXT NOT NULL,
         taskDescription TEXT NOT NULL,
         taskPriority TEXT NOT NULL,
         taskEndDate DATE NOT NULL,
-        taskStatus Text not null,
+        taskStatus Text,
         taskClosed Date,
+        fkTaskHistory Integer,
         fkUserId INTEGER NOT NULL,
-        FOREIGN KEY (fkUserId) REFERENCES Users(userId)
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId),
+        FOREIGN KEY (fkTaskHistory) REFERENCES TaskHistory(taskHistoryId)
     )
 `);
 
@@ -284,10 +295,19 @@ for (const pid of projectIds) {
             taskClosedValue = taskDate.toISOString().split('T')[0];
         }
 
+        let taskHistoryId = null;
+        if (Math.random() > 0.3) {
+            const historyResult = await db.run(
+                `INSERT INTO TaskHistory (historyText, historyDate) VALUES (?, ?)`,
+                [`Task initialized with status ${currentStatus}`, Date.now()]
+            );
+            taskHistoryId = historyResult.lastID;
+        }
+
         // 1. Task in der Haupttabelle anlegen (zugewiesen an den User)
         const resultTask = await db.run(
-            `INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, taskClosed, fkUserId)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, taskClosed, fkTaskHistory, fkUserId)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 randomTemplate.taskTitle, 
                 randomTemplate.taskDescription, 
@@ -295,6 +315,7 @@ for (const pid of projectIds) {
                 randomTemplate.taskEndDate, 
                 currentStatus, 
                 taskClosedValue, 
+                taskHistoryId,
                 assignedUser
             ]
         );

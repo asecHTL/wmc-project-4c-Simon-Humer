@@ -11,7 +11,7 @@ export async function  load({url, fetch}) {
 
     try {
         const [res1, res2, res3, res4] = await Promise.all([
-            fetch(`http://localhost:3000/dashboard/personalNextTasks/${userId}`),
+            fetch(`http://localhost:3000/dashboard/personalNextTasks/${userId}?limit=3`),
             fetch(`http://localhost:3000/dashboard/overviewPersonalTasks/${userId}`),
             fetch(`http://localhost:3000/dashboard/tasksByPriority/${userId}`),
             fetch(`http://localhost:3000/dashboard/personalTasksDoneGraph/${userId}?taskGraphDate=${taskGraphDate}`)

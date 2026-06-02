@@ -49,10 +49,23 @@ await db.exec(`
         taskEndDate DATE NOT NULL,
         taskStatus Text,
         taskClosed Date,
+        fkTaskHistory Integer,
         fkUserId INTEGER NOT NULL,
-        FOREIGN KEY (fkUserId) REFERENCES Users(userId)
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId),
+        Foreign Key (fkTaskHistory) REFERENCES TaskHistory(taskHistoryId)
     )
 `);
+
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS TaskHistory (
+        taskHistoryId INTEGER PRIMARY KEY AUTOINCREMENT,
+        historyText Text not null,
+        historyDate Integer not null
+    )
+`);
+
+
 
 await db.exec(`
     CREATE TABLE IF NOT EXISTS Team (
@@ -176,11 +189,32 @@ app.post('/user/login', async (req, res) => {
 
 app.get('/dashboard/personalNextTasks/:userId', async (req, res) => {
     const { userId } = req.params || {};
-    const tasks = await db.all('Select * from Tasks where fkUserId = ? LIMIT 3', [userId]);
-    if (!tasks || tasks.length === 0) {
-        return res.status(404).send('No tasks for the given user');
-    } else {
-        return res.json(tasks);
+    const { limit } = req.query;
+
+    let sql = `
+        SELECT t.*, th.historyText, th.historyDate
+        FROM Tasks t
+        LEFT JOIN TaskHistory th ON t.fkTaskHistory = th.taskHistoryId
+        WHERE t.fkUserId = ?
+    `;
+
+    const params = [userId];
+
+    if (limit) {
+        sql += ` LIMIT ?`;
+        params.push(parseInt(limit));
+    }
+
+    try {
+        const tasks = await db.all(sql, params);
+        if (!tasks || tasks.length === 0) {
+            return res.status(404).send('No tasks for the given user');
+        } else {
+            return res.json(tasks);
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
@@ -578,7 +612,7 @@ app.delete('/projectUserTable/:projectId', async (req, res) => {
 });
 
 app.post('/projectTaskTable/:projectId', async (req, res) => {
-    const { taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId } = req.body;
+    const { taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId, historyText } = req.body;
 
     try {
         const projectId = parseInt(req.params.projectId);
@@ -587,10 +621,19 @@ app.post('/projectTaskTable/:projectId', async (req, res) => {
             return res.status(400).send('Missing properties required for Task creation!');
         }
 
+        let taskHistoryId = null;
+        if (historyText) {
+            const historyResult = await db.run(`
+                INSERT INTO TaskHistory (historyText, historyDate) 
+                VALUES (?, ?)
+            `, [historyText, Date.now()]);
+            taskHistoryId = historyResult.lastID;
+        }
+
         const resultTask = await db.run(`
-            INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId) 
-            VALUES (?, ?, ?, ?, ?)
-        `, [taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId]);
+            INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId, fkTaskHistory) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId, taskHistoryId]);
 
         const taskId = resultTask.lastID;
 
@@ -599,7 +642,7 @@ app.post('/projectTaskTable/:projectId', async (req, res) => {
             VALUES (?, ?)
         `, [projectId, taskId]);
 
-        return res.json({ fkUserId: fkUserId, fkProjectId: projectId, fkTaskId: taskId });
+        return res.json({ fkUserId: fkUserId, fkProjectId: projectId, fkTaskId: taskId, fkTaskHistory: taskHistoryId });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: "Internal Server Error" });
@@ -657,9 +700,10 @@ app.get('/projectTaskTable/:projectId', async (req, res) => {
     try {
         const projectId = parseInt(req.params.projectId);
         const tasks = await db.all(`
-            SELECT t.*
+            SELECT t.*, th.historyText, th.historyDate
             FROM Tasks t
             JOIN ProjectTasksTable pt ON t.taskId = pt.fkTaskId
+            LEFT JOIN TaskHistory th ON t.fkTaskHistory = th.taskHistoryId
             WHERE pt.fkProjectId = ?
         `, [projectId]);
 
@@ -673,15 +717,27 @@ app.get('/projectTaskTable/:projectId', async (req, res) => {
 app.put('/task/:taskId', async (req, res) => {
     try {
         const taskId = parseInt(req.params.taskId);
-        const { taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId } = req.body;
+        const { taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId, historyText } = req.body;
+
+        const currentTask = await db.get('SELECT fkTaskHistory FROM Tasks WHERE taskId = ?', [taskId]);
+
+        let taskHistoryId = currentTask ? currentTask.fkTaskHistory : null;
+
+        if (historyText) {
+            const historyResult = await db.run(`
+                INSERT INTO TaskHistory (historyText, historyDate) 
+                VALUES (?, ?)
+            `, [historyText, Date.now()]);
+            taskHistoryId = historyResult.lastID;
+        }
 
         await db.run(`
             UPDATE Tasks 
-            SET taskTitle = ?, taskDescription = ?, taskPriority = ?, taskEndDate = ?, taskStatus = ?, fkUserId = ?
+            SET taskTitle = ?, taskDescription = ?, taskPriority = ?, taskEndDate = ?, taskStatus = ?, fkUserId = ?, fkTaskHistory = ?
             WHERE taskId = ?
-        `, [taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId, taskId]);
+        `, [taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId, taskHistoryId, taskId]);
 
-        res.json({ taskId, taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId });
+        res.json({ taskId, taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId, fkTaskHistory: taskHistoryId });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: "Internal Server Error" });
