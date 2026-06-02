@@ -842,6 +842,9 @@ app.post('/taskHistoryTable/:taskId',async (req, res) => {
         `, [historyText, historyDate]);
 
         const taskHistoryId = resultTaskHistory.lastID;
+
+        await db.run('UPDATE Tasks SET fkTaskHistory = ? WHERE taskId = ?', [taskHistoryId, taskId]);
+
         return res.status(201).json({ taskHistoryId, historyText, historyDate});
     } catch (error) {
         console.error(error);

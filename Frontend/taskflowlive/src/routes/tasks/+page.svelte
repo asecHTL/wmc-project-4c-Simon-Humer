@@ -9,25 +9,38 @@
         taskPriority: "Medium",
         taskEndDate: "",
         taskStatus: "toDo",
-        fkUserId: userData.userId
+        fkUserId: userData.userId,
+    });
+
+    let taskSelectedId = $state(0);
+
+    let newHistoryTask = $state({
+        historyText: "",
+        historyDate: Date.now(),
     });
 
     let showDialog = $state(false);
+    let showDialogTaskHistory = $state(false);
 
     async function addTask() {
         showDialog = true;
+    }
+
+    async function addHistory(taskId) {
+        taskSelectedId = taskId;
+        showDialogTaskHistory = true;
     }
 
     async function submitTask() {
         if (!newTask.taskTitle || !newTask.taskEndDate) return;
 
         try {
-            const response = await fetch('http://localhost:3000/task', {
-                method: 'POST',
+            const response = await fetch("http://localhost:3000/task", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json",
                 },
-                body: JSON.stringify(newTask)
+                body: JSON.stringify(newTask),
             });
 
             if (response.ok) {
@@ -38,21 +51,49 @@
                     taskPriority: "Medium",
                     taskEndDate: "",
                     taskStatus: "toDo",
-                    fkUserId: userData.userId
+                    fkUserId: userData.userId,
                 };
                 window.location.reload();
             }
         } catch (error) {
-            console.error('Error adding task:', error);
+            console.error("Error adding task:", error);
+        }
+    }
+
+    async function submitHostoryToTask() {
+        if (
+            !newHistoryTask.historyDate ||
+            !newHistoryTask.historyText ||
+            taskSelectedId === 0 ||
+            !taskSelectedId
+        )
+            return;
+        try {
+            const response = await fetch(
+                `http://localhost:3000/taskHistoryTable/${taskSelectedId}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(newHistoryTask),
+                },
+            );
+
+            if (response.ok) {
+                showDialogTaskHistory = false;
+                newHistoryTask = {
+                    historyText: "",
+                    historyDate: Date.now,
+                };
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error("Error adding task:", error);
         }
     }
 
     let counterToDo = $state(0);
-
-
-    
-
-
 </script>
 
 <div class="header">
@@ -71,7 +112,8 @@
         <ul>
             {#each data.tasks as task}
                 {#if task.taskStatus === "toDo"}
-                    <div class="taskCard">
+                    <div class="taskCard" class:selected={taskSelectedId === task.taskId}>
+                        <button class="history-icon" onclick={(e) => { e.stopPropagation(); addHistory(task.taskId); }}>📜</button>
                         <div class="taskCardTitle">{task.taskTitle}</div>
                         <div class="taskCardDescription">
                             {task.taskDescription}
@@ -94,7 +136,8 @@
         <ul>
             {#each data.tasks as task}
                 {#if task.taskStatus === "inProgress"}
-                    <div class="taskCard">
+                    <div class="taskCard" class:selected={taskSelectedId === task.taskId}>
+                        <button class="history-icon" onclick={(e) => { e.stopPropagation(); addHistory(task.taskId); }}>📜</button>
                         <div class="taskCardTitle">{task.taskTitle}</div>
                         <div class="taskCardDescription">
                             {task.taskDescription}
@@ -117,7 +160,8 @@
         <ul>
             {#each data.tasks as task}
                 {#if task.taskStatus === "review"}
-                    <div class="taskCard">
+                    <div class="taskCard" class:selected={taskSelectedId === task.taskId}>
+                        <button class="history-icon" onclick={(e) => { e.stopPropagation(); addHistory(task.taskId); }}>📜</button>
                         <div class="taskCardTitle">{task.taskTitle}</div>
                         <div class="taskCardDescription">
                             {task.taskDescription}
@@ -140,7 +184,8 @@
         <ul>
             {#each data.tasks as task}
                 {#if task.taskStatus === "done"}
-                    <div class="taskCard">
+                    <div class="taskCard" class:selected={taskSelectedId === task.taskId}>
+                        <button class="history-icon" onclick={(e) => { e.stopPropagation(); addHistory(task.taskId); }}>📜</button>
                         <div class="taskCardTitle">{task.taskTitle}</div>
                         <div class="taskCardDescription">
                             {task.taskDescription}
@@ -165,9 +210,15 @@
             <h2>Create New Task</h2>
             <div class="input-group">
                 <label>Title</label>
-                <input bind:value={newTask.taskTitle} placeholder="Task Title" />
+                <input
+                    bind:value={newTask.taskTitle}
+                    placeholder="Task Title"
+                />
                 <label>Description</label>
-                <input bind:value={newTask.taskDescription} placeholder="Task Description" />
+                <input
+                    bind:value={newTask.taskDescription}
+                    placeholder="Task Description"
+                />
                 <label>Priority</label>
                 <select bind:value={newTask.taskPriority}>
                     <option>High</option>
@@ -185,8 +236,40 @@
                 </select>
             </div>
             <div class="dialog-actions">
-                <button class="btn btn-secondary" onclick={() => showDialog = false}>Cancel</button>
-                <button class="btn btn-primary" onclick={submitTask}>Create Task</button>
+                <button
+                    class="btn btn-secondary"
+                    onclick={() => (showDialog = false)}>Cancel</button
+                >
+                <button class="btn btn-primary" onclick={submitTask}
+                    >Create Task</button
+                >
+            </div>
+        </div>
+    </div>
+{/if}
+
+
+
+{#if showDialogTaskHistory}
+    <div class="dialog-overlay">
+        <div class="dialog-card">
+            <h2>Create New History Entrey</h2>
+            <div class="input-group">
+                <label>Text</label>
+                <input
+                    bind:value={newHistoryTask.historyText}
+                    placeholder="History Text"
+                />
+            </div>
+               
+            <div class="dialog-actions">
+                <button
+                    class="btn btn-secondary"
+                    onclick={() => (showDialogTaskHistory = false)}>Cancel</button
+                >
+                <button class="btn btn-primary" onclick={submitHostoryToTask}
+                    >Create History</button
+                >
             </div>
         </div>
     </div>
@@ -212,6 +295,49 @@
         height: 100vh;
     }
 
+    /* --- TASK CARD SELECTION --- */
+    .taskCard {
+        cursor: pointer;
+        transition: transform 0.2s, border-color 0.2s;
+        position: relative;
+    }
+
+    .history-icon {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 18px;
+        color: #9ca3af;
+        padding: 0;
+        line-height: 1;
+        transition: color 0.2s;
+        z-index: 10;
+    }
+
+    .history-icon:hover {
+        color: #5b7fff;
+    }
+
+    .taskCardTitle {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
+        padding-right: 24px;
+    }
+
+    .taskCard:hover {
+        transform: translateY(-2px);
+        border-color: #5b7fff;
+    }
+
+    .taskCard.selected {
+        border-color: #5b7fff;
+        background-color: #f0f4ff;
+    }
+
     /* --- DIALOG STYLES --- */
     .dialog-overlay {
         position: fixed;
@@ -219,7 +345,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0,0,0,0.5);
+        background: rgba(0, 0, 0, 0.5);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -232,7 +358,7 @@
         border-radius: 12px;
         width: 100%;
         max-width: 500px;
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     }
 
     .dialog-card h2 {
@@ -256,7 +382,8 @@
         margin-bottom: 1rem;
     }
 
-    input, select {
+    input,
+    select {
         width: 100%;
         padding: 0.65rem 0.75rem;
         border: 1px solid #cbd5e1;
@@ -473,15 +600,6 @@
         font-weight: 600;
         color: #111827;
         padding-right: 20px;
-    }
-
-    .taskCardTitle::after {
-        content: "📄";
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        font-size: 18px; /* war 12px */
-        color: #9ca3af;
     }
 
     .taskCardDescription {
