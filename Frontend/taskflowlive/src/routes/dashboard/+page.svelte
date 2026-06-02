@@ -14,25 +14,31 @@
     }
 
     const statusMeta = $derived({
-        Done: {
+        done: {
             icon: "✓",
             color: "#5bc4a0",
             bg: "#e0f5ed",
             label: t("taskCompleted"),
         },
-        InProgress: {
+        inProgress: {
             icon: "🕐",
             color: "#e6b84a",
             bg: "#fdf3d7",
             label: t("inProgress"),
         },
-        OnHold: {
-            icon: "⊠",
+        toDo: {
+            icon: "📋",
+            color: "#4a90e2",
+            bg: "#e1f0ff",
+            label: t("toDo") || "To Do",
+        },
+        review: {
+            icon: "👁",
             color: "#e8924a",
             bg: "#fdebd7",
-            label: t("onHold"),
+            label: t("review") || "Review",
         },
-        Overdue: {
+        overdue: {
             icon: "⊖",
             color: "#a07eda",
             bg: "#ede5f8",

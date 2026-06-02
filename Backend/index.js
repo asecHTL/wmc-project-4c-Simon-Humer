@@ -224,10 +224,11 @@ app.get('/dashboard/overviewPersonalTasks/:userId', async (req, res) => {
         const tasks = await db.all('Select * from Tasks where fkUserId = ?', [userId]) || [];
 
         const statusOverview = [
-            { status: 'Done', count: 0 },
-            { status: 'InProgress', count: 0 },
-            { status: 'OnHold', count: 0 },
-            { status: 'Overdue', count: 0 },
+            { status: 'done', count: 0 },
+            { status: 'inProgress', count: 0 },
+            { status: 'toDo', count: 0 },
+            { status: 'review', count: 0 },
+            { status: 'overdue', count: 0 },
         ];
 
         tasks.forEach(task => {
@@ -272,7 +273,7 @@ app.get('/dashboard/personalTasksDoneGraph/:userId', async (req, res) => {
             SELECT taskClosed AS date, COUNT(*) AS count 
             FROM Tasks 
             WHERE fkUserId = ? 
-              AND taskStatus = 'Done' 
+              AND taskStatus = 'done' 
               AND taskClosed IS NOT NULL
             GROUP BY taskClosed
             ORDER BY taskClosed ASC
