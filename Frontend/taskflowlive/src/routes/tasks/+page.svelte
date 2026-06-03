@@ -12,15 +12,17 @@
         fkUserId: userData.userId,
     });
 
-    let taskSelectedId = $state(0);
-
     let newHistoryTask = $state({
         historyText: "",
         historyDate: Date.now(),
     });
 
+    let historyForTask = $state();
+
     let showDialog = $state(false);
     let showDialogTaskHistory = $state(false);
+
+    let taskSelectedId = $state(0);
 
     async function addTask() {
         showDialog = true;
@@ -28,6 +30,7 @@
 
     async function addHistory(taskId) {
         taskSelectedId = taskId;
+        await lookUpTaskHistory();
         showDialogTaskHistory = true;
     }
 
@@ -60,6 +63,19 @@
         }
     }
 
+    async function lookUpTaskHistory() {
+        try {
+            const response = await fetch(
+                `http://localhost:3000/taskHistoryTable/${taskSelectedId}`,
+            );
+            if (response.ok) {
+                historyForTask = await response.json();
+            }
+        } catch (error) {
+            console.error("Error adding task:", error);
+        }
+    }
+
     async function submitHostoryToTask() {
         if (
             !newHistoryTask.historyDate ||
@@ -84,7 +100,7 @@
                 showDialogTaskHistory = false;
                 newHistoryTask = {
                     historyText: "",
-                    historyDate: Date.now,
+                    historyDate: Date.now(),
                 };
                 window.location.reload();
             }
@@ -112,8 +128,17 @@
         <ul>
             {#each data.tasks as task}
                 {#if task.taskStatus === "toDo"}
-                    <div class="taskCard" class:selected={taskSelectedId === task.taskId}>
-                        <button class="history-icon" onclick={(e) => { e.stopPropagation(); addHistory(task.taskId); }}>📜</button>
+                    <div
+                        class="taskCard"
+                        class:selected={taskSelectedId === task.taskId}
+                    >
+                        <button
+                            class="history-icon"
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                addHistory(task.taskId);
+                            }}>📜</button
+                        >
                         <div class="taskCardTitle">{task.taskTitle}</div>
                         <div class="taskCardDescription">
                             {task.taskDescription}
@@ -136,8 +161,17 @@
         <ul>
             {#each data.tasks as task}
                 {#if task.taskStatus === "inProgress"}
-                    <div class="taskCard" class:selected={taskSelectedId === task.taskId}>
-                        <button class="history-icon" onclick={(e) => { e.stopPropagation(); addHistory(task.taskId); }}>📜</button>
+                    <div
+                        class="taskCard"
+                        class:selected={taskSelectedId === task.taskId}
+                    >
+                        <button
+                            class="history-icon"
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                addHistory(task.taskId);
+                            }}>📜</button
+                        >
                         <div class="taskCardTitle">{task.taskTitle}</div>
                         <div class="taskCardDescription">
                             {task.taskDescription}
@@ -160,8 +194,17 @@
         <ul>
             {#each data.tasks as task}
                 {#if task.taskStatus === "review"}
-                    <div class="taskCard" class:selected={taskSelectedId === task.taskId}>
-                        <button class="history-icon" onclick={(e) => { e.stopPropagation(); addHistory(task.taskId); }}>📜</button>
+                    <div
+                        class="taskCard"
+                        class:selected={taskSelectedId === task.taskId}
+                    >
+                        <button
+                            class="history-icon"
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                addHistory(task.taskId);
+                            }}>📜</button
+                        >
                         <div class="taskCardTitle">{task.taskTitle}</div>
                         <div class="taskCardDescription">
                             {task.taskDescription}
@@ -184,8 +227,17 @@
         <ul>
             {#each data.tasks as task}
                 {#if task.taskStatus === "done"}
-                    <div class="taskCard" class:selected={taskSelectedId === task.taskId}>
-                        <button class="history-icon" onclick={(e) => { e.stopPropagation(); addHistory(task.taskId); }}>📜</button>
+                    <div
+                        class="taskCard"
+                        class:selected={taskSelectedId === task.taskId}
+                    >
+                        <button
+                            class="history-icon"
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                addHistory(task.taskId);
+                            }}>📜</button
+                        >
                         <div class="taskCardTitle">{task.taskTitle}</div>
                         <div class="taskCardDescription">
                             {task.taskDescription}
@@ -248,28 +300,54 @@
     </div>
 {/if}
 
-
-
 {#if showDialogTaskHistory}
     <div class="dialog-overlay">
-        <div class="dialog-card">
-            <h2>Create New History Entrey</h2>
-            <div class="input-group">
-                <label>Text</label>
-                <input
-                    bind:value={newHistoryTask.historyText}
-                    placeholder="History Text"
-                />
+        <div class="dialog-card history-dialog">
+            <div class="dialog-header">
+                <h2>Task History</h2>
+                <button class="close-btn" onclick={() => (showDialogTaskHistory = false)}>✕</button>
             </div>
-               
-            <div class="dialog-actions">
-                <button
-                    class="btn btn-secondary"
-                    onclick={() => (showDialogTaskHistory = false)}>Cancel</button
-                >
-                <button class="btn btn-primary" onclick={submitHostoryToTask}
-                    >Create History</button
-                >
+            
+            <div class="history-section">
+                <h3>Previous Entries</h3>
+                <div class="history-scroll-container">
+                    {#if historyForTask && historyForTask.length > 0}
+                        {#each historyForTask as singleHistoryTask}
+                            <div class="history-item">
+                                <div class="history-item-header">
+                                    <span class="history-date">{new Date(singleHistoryTask.historyDate).toLocaleString()}</span>
+                                </div>
+                                <div class="history-item-content">
+                                    {singleHistoryTask.historyText}
+                                </div>
+                            </div>
+                        {/each}
+                    {:else}
+                        <div class="no-history">No history entries yet.</div>
+                    {/if}
+                </div>
+            </div>
+
+            <div class="new-history-section">
+                <h3>Add New Entry</h3>
+                <div class="input-group">
+                    <textarea
+                        bind:value={newHistoryTask.historyText}
+                        placeholder="What happened? Describe the progress..."
+                        rows="3"
+                    ></textarea>
+                </div>
+
+                <div class="dialog-actions">
+                    <button
+                        class="btn btn-secondary"
+                        onclick={() => (showDialogTaskHistory = false)}
+                        >Close</button
+                    >
+                    <button class="btn btn-primary" onclick={submitHostoryToTask}
+                        >Add Entry</button
+                    >
+                </div>
             </div>
         </div>
     </div>
@@ -298,7 +376,9 @@
     /* --- TASK CARD SELECTION --- */
     .taskCard {
         cursor: pointer;
-        transition: transform 0.2s, border-color 0.2s;
+        transition:
+            transform 0.2s,
+            border-color 0.2s;
         position: relative;
     }
 
@@ -420,6 +500,147 @@
         background: #fff;
         border-color: #cbd5e1;
         color: #4b5563;
+    }
+
+    /* --- HISTORY DIALOG SPECIFIC --- */
+    .history-dialog {
+        max-width: 600px;
+        display: flex;
+        flex-direction: column;
+        max-height: 90vh;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .dialog-header h2 {
+        margin: 0;
+        border: none;
+        padding: 0;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .close-btn:hover {
+        color: #1e293b;
+    }
+
+    .history-section, .new-history-section {
+        padding: 1.5rem 2rem;
+    }
+
+    .history-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        background-color: #f8fafc;
+    }
+
+    .history-section h3, .new-history-section h3 {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        margin-top: 0;
+        margin-bottom: 1rem;
+    }
+
+    .history-scroll-container {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding-right: 0.5rem;
+    }
+
+    .history-scroll-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .history-scroll-container::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+    }
+
+    .history-scroll-container::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+
+    .history-item {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .history-item-header {
+        margin-bottom: 0.5rem;
+    }
+
+    .history-date {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #5b7fff;
+    }
+
+    .history-item-content {
+        font-size: 0.9rem;
+        color: #334155;
+        line-height: 1.5;
+        white-space: pre-wrap;
+    }
+
+    .no-history {
+        text-align: center;
+        padding: 2rem;
+        color: #94a3b8;
+        font-style: italic;
+    }
+
+    textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 0.9rem;
+        resize: vertical;
+        box-sizing: border-box;
+    }
+
+    textarea:focus {
+        outline: none;
+        border-color: #5b7fff;
+        box-shadow: 0 0 0 3px rgba(91, 127, 255, 0.1);
+    }
+
+    .new-history-section {
+        border-top: 1px solid #e2e8f0;
+        background: white;
+    }
+
+    .new-history-section .dialog-actions {
+        margin-top: 1rem;
+        padding-top: 0;
+        border: none;
     }
 
     /* --- HEADER / TOOLBAR --- */

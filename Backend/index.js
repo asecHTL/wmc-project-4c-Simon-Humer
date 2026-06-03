@@ -850,7 +850,31 @@ app.post('/taskHistoryTable/:taskId',async (req, res) => {
         console.error(error);
         return res.status(500).json({ error: "Internal Server Error" });
     }
-})
+});
+
+
+
+app.get('/taskHistoryTable/:taskId',async (req, res) => {
+    const taskId = parseInt(req.params.taskId);
+
+    if (!taskId ) {
+        return res.status(400).send('taskId is required');
+    }
+
+    try {
+        const historyForTask = await db.all(`
+            SELECT th.historyText, th.historyDate
+            FROM Tasks t
+            JOIN TaskHistory th ON t.fkTaskHistory = th.taskHistoryId
+            WHERE th.taskHistoryId = ?
+        `, [taskId]);
+
+        return res.json(historyForTask || []);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
