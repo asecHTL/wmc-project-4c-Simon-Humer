@@ -1,5 +1,6 @@
 <script>
     import { goto } from '$app/navigation';
+    import { t } from '$lib/i18n/i18n.svelte.js';
 
     let username = $state('');
     let email = $state('');
@@ -38,11 +39,11 @@
                 goto('/');
             } else {
                 const errorText = await response.text();
-                errorMessage = errorText || 'Registrierung fehlgeschlagen.';
+                errorMessage = errorText || t('registrationFailed');
             }
         } catch (error) {
             console.error('Registration Error:', error);
-            errorMessage = 'Verbindung zum Server fehlgeschlagen.';
+            errorMessage = t('connectionFailed');
         } finally {
             isLoading = false;
         }
@@ -58,7 +59,7 @@
         <form onsubmit={handleRegister}>
             <div class="form-grid">
                 <fieldset class="form-group">
-                    <legend>Username *</legend>
+                    <legend>{t('username')} *</legend>
                     <input 
                         type="text" 
                         id="username" 
@@ -69,7 +70,7 @@
                 </fieldset>
 
                 <fieldset class="form-group">
-                    <legend>Firstname *</legend>
+                    <legend>{t('firstname')} *</legend>
                     <input 
                         type="text" 
                         id="firstname" 
@@ -80,7 +81,7 @@
                 </fieldset>
 
                 <fieldset class="form-group">
-                    <legend>Email *</legend>
+                    <legend>{t('email')} *</legend>
                     <input 
                         type="email" 
                         id="email" 
@@ -91,7 +92,7 @@
                 </fieldset>
 
                 <fieldset class="form-group">
-                    <legend>Lastname *</legend>
+                    <legend>{t('lastname')} *</legend>
                     <input 
                         type="text" 
                         id="lastname" 
@@ -102,7 +103,7 @@
                 </fieldset>
 
                 <fieldset class="form-group">
-                    <legend>Password *</legend>
+                    <legend>{t('password')} *</legend>
                     <input 
                         type="password" 
                         id="password" 
@@ -113,7 +114,7 @@
                 </fieldset>
 
                 <fieldset class="form-group">
-                    <legend>Birthday</legend>
+                    <legend>{t('birthday')}</legend>
                     <input 
                         type="text" 
                         id="birthday" 
@@ -132,13 +133,13 @@
 
             <div class="button-wrapper">
                 <button type="submit" disabled={isLoading}>
-                    {isLoading ? 'Wird registriert...' : 'Register'}
+                    {isLoading ? t('registering') : t('register')}
                 </button>
             </div>
         </form>
 
         <div class="footer">
-            <a href="/">Already have an account? Register now</a>
+            <a href="/">{t('alreadyHaveAccount')} {t('registerNow')}</a>
         </div>
     </div>
 </div>

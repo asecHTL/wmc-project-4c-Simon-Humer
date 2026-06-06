@@ -1,5 +1,6 @@
 <script>
     import { userData } from "$lib/shared/User.svelte";
+    import { t } from "$lib/i18n/i18n.svelte.js";
 
     let { data } = $props();
 
@@ -129,19 +130,19 @@
 </script>
 
 <div class="header">
-    <div class="filter">Filter</div>
-    <div class="groupBy">Group By</div>
-    <div class="sortBy">Sort by</div>
+    <div class="filter">{t('filter') || 'Filter'}</div>
+    <div class="groupBy">{t('groupBy') || 'Group By'}</div>
+    <div class="sortBy">{t('sortBy') || 'Sort by'}</div>
 
-    <div class="searchBar">Search tasks..</div>
+    <div class="searchBar">{t('searchTasks') || 'Search tasks..'}</div>
 
-    <button class="addTask" onclick={() => addTask()}>Add Task</button>
+    <button class="addTask" onclick={() => addTask()}>{t('tasks')} +</button>
 </div>
 
 <div class="board">
     <div class="toDo">
-        <div class="headerStatus"><h2>ToDo</h2></div>
-        <ul>
+        <div class="headerStatus"><h2>{t('toDo')}</h2></div>
+        <ul data-add-task={t('tasks') + ' +'}>
             {#each data.tasks as task}
                 {#if task.taskStatus === "toDo"}
                     <div
@@ -162,10 +163,9 @@
                         <div
                             class="taskCardPriority {task.taskPriority.toLowerCase()}"
                         >
-                            {task.taskPriority}
+                            {t(task.taskPriority.toLowerCase() + 'Priority') || task.taskPriority}
                         </div>
                         <div class="taskEndDate">{task.taskEndDate}</div>
-                        <div class="taskProjectName">Project xy</div>
                     </div>
                 {/if}
             {/each}
@@ -173,8 +173,8 @@
     </div>
 
     <div class="inProgress">
-        <div class="headerStatus"><h2>In Progress</h2></div>
-        <ul>
+        <div class="headerStatus"><h2>{t('inProgress')}</h2></div>
+        <ul data-add-task={t('tasks') + ' +'}>
             {#each data.tasks as task}
                 {#if task.taskStatus === "inProgress"}
                     <div
@@ -195,10 +195,9 @@
                         <div
                             class="taskCardPriority {task.taskPriority.toLowerCase()}"
                         >
-                            {task.taskPriority}
+                            {t(task.taskPriority.toLowerCase() + 'Priority') || task.taskPriority}
                         </div>
                         <div class="taskEndDate">{task.taskEndDate}</div>
-                        <div class="taskProjectName">Project xy</div>
                     </div>
                 {/if}
             {/each}
@@ -206,8 +205,8 @@
     </div>
 
     <div class="review">
-        <div class="headerStatus"><h2>Review</h2></div>
-        <ul>
+        <div class="headerStatus"><h2>{t('review')}</h2></div>
+        <ul data-add-task={t('tasks') + ' +'}>
             {#each data.tasks as task}
                 {#if task.taskStatus === "review"}
                     <div
@@ -228,10 +227,9 @@
                         <div
                             class="taskCardPriority {task.taskPriority.toLowerCase()}"
                         >
-                            {task.taskPriority}
+                            {t(task.taskPriority.toLowerCase() + 'Priority') || task.taskPriority}
                         </div>
                         <div class="taskEndDate">{task.taskEndDate}</div>
-                        <div class="taskProjectName">Project xy</div>
                     </div>
                 {/if}
             {/each}
@@ -239,8 +237,8 @@
     </div>
 
     <div class="done">
-        <div class="headerStatus"><h2>Done</h2></div>
-        <ul>
+        <div class="headerStatus"><h2>{t('taskCompleted')}</h2></div>
+        <ul data-add-task={t('tasks') + ' +'}>
             {#each data.tasks as task}
                 {#if task.taskStatus === "done"}
                     <div
@@ -261,10 +259,9 @@
                         <div
                             class="taskCardPriority {task.taskPriority.toLowerCase()}"
                         >
-                            {task.taskPriority}
+                            {t(task.taskPriority.toLowerCase() + 'Priority') || task.taskPriority}
                         </div>
                         <div class="taskEndDate">{task.taskEndDate}</div>
-                        <div class="taskProjectName">Project xy</div>
                     </div>
                 {/if}
             {/each}
@@ -275,41 +272,41 @@
 {#if showDialog}
     <div class="dialog-overlay">
         <div class="dialog-card">
-            <h2>Create New Task</h2>
+            <h2>{t('createTask')}</h2>
             <div class="input-group">
-                <label>Title</label>
+                <label>{t('taskTitle')}</label>
                 <input
                     bind:value={newTask.taskTitle}
-                    placeholder="Task Title"
+                    placeholder={t('taskTitle')}
                 />
-                <label>Description</label>
+                <label>{t('taskDescription')}</label>
                 <input
                     bind:value={newTask.taskDescription}
-                    placeholder="Task Description"
+                    placeholder={t('taskDescription')}
                 />
-                <label>Priority</label>
+                <label>{t('taskPriority')}</label>
                 <select bind:value={newTask.taskPriority}>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
+                    <option value="High">{t('highPriority')}</option>
+                    <option value="Medium">{t('mediumPriority')}</option>
+                    <option value="Low">{t('lowPriority')}</option>
                 </select>
-                <label>End Date</label>
+                <label>{t('endDate')}</label>
                 <input type="date" bind:value={newTask.taskEndDate} />
-                <label>Status</label>
+                <label>{t('status')}</label>
                 <select bind:value={newTask.taskStatus}>
-                    <option value="toDo">ToDo</option>
-                    <option value="inProgress">In Progress</option>
-                    <option value="review">Review</option>
-                    <option value="done">Done</option>
+                    <option value="toDo">{t('toDo')}</option>
+                    <option value="inProgress">{t('inProgress')}</option>
+                    <option value="review">{t('review')}</option>
+                    <option value="done">{t('taskCompleted')}</option>
                 </select>
             </div>
             <div class="dialog-actions">
                 <button
                     class="btn btn-secondary"
-                    onclick={() => (showDialog = false)}>Cancel</button
+                    onclick={() => (showDialog = false)}>{t('cancel')}</button
                 >
                 <button class="btn btn-primary" onclick={submitTask}
-                    >Create Task</button
+                    >{t('createTask')}</button
                 >
             </div>
         </div>
@@ -320,12 +317,12 @@
     <div class="dialog-overlay">
         <div class="dialog-card history-dialog">
             <div class="dialog-header">
-                <h2>Task History</h2>
+                <h2>{t('taskHistory')}</h2>
                 <button class="close-btn" onclick={() => (showDialogTaskHistory = false)}>✕</button>
             </div>
             
             <div class="history-section">
-                <h3>Previous Entries</h3>
+                <h3>{t('previousEntries')}</h3>
                 <div class="history-scroll-container">
                     {#if historyForTask && historyForTask.length > 0}
                         {#each historyForTask as singleHistoryTask}
@@ -340,17 +337,17 @@
                             </div>
                         {/each}
                     {:else}
-                        <div class="no-history">No history entries yet.</div>
+                        <div class="no-history">{t('noHistory')}</div>
                     {/if}
                 </div>
             </div>
 
             <div class="new-history-section">
-                <h3>Add New Entry</h3>
+                <h3>{t('addNewEntry')}</h3>
                 <div class="input-group">
                     <textarea
                         bind:value={newHistoryTask.historyText}
-                        placeholder="What happened? Describe the progress..."
+                        placeholder={t('whatHappened')}
                         rows="3"
                     ></textarea>
                 </div>
@@ -359,10 +356,10 @@
                     <button
                         class="btn btn-secondary"
                         onclick={() => (showDialogTaskHistory = false)}
-                        >Close</button
+                        >{t('close')}</button
                     >
                     <button class="btn btn-primary" onclick={submitHostoryToTask}
-                        >Add Entry</button
+                        >{t('addEntry')}</button
                     >
                 </div>
             </div>
@@ -847,16 +844,6 @@
         margin: 0;
     }
 
-    .taskProjectName {
-        background-color: #eef2ff;
-        color: #4f46e5;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 4px 8px;
-        border-radius: 6px;
-        align-self: flex-start;
-    }
-
     .taskCardPriority,
     .taskEndDate {
         display: inline-flex;
@@ -894,7 +881,7 @@
     }
 
     ul::after {
-        content: "+ Add Task";
+        content: attr(data-add-task);
         display: block;
         color: #5b7fff;
         font-size: 13px;

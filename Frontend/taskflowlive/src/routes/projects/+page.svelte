@@ -59,7 +59,7 @@
     }
 
     async function removeProjectMember(memberId) {
-        if (!confirm("Remove this member from project?")) return;
+        if (!confirm(t('removeMemberConfirm'))) return;
         try {
             const res = await fetch(`http://localhost:3000/projectUserTable/${selectedProjectId}?userId=${memberId}`, {
                 method: 'DELETE'
@@ -90,7 +90,7 @@
     }
 
     async function deleteTask() {
-        if (!confirm("Are you sure?")) return;
+        if (!confirm(t('deleteTaskConfirm'))) return;
         try {
             const res = await fetch(`http://localhost:3000/task/${editingTask.taskId}`, { method: 'DELETE' });
             if (res.ok) {
@@ -253,7 +253,7 @@
                     {#each overview as o}
                         <div class="stat-card status-{o.status.toLowerCase()}">
                             <span class="stat-count">{o.count}</span>
-                            <small class="stat-label">{o.status}</small>
+                            <small class="stat-label">{t(o.status.charAt(0).toLowerCase() + o.status.slice(1)) || o.status}</small>
                         </div>
                     {/each}
                 </div>
@@ -265,16 +265,16 @@
 
             <div class="form-row">
                 <div class="column">
-                    <h3>Details</h3>
+                    <h3>{t('details')}</h3>
                     <div class="input-group">
                         <input
-                            placeholder="Project Name"
+                            placeholder={t('projectName')}
                             bind:value={newProject.projectName}
                         />
                         <select bind:value={newProject.projectPriority}>
-                            <option>High</option>
-                            <option>Medium</option>
-                            <option>Low</option>
+                            <option value="High">{t('highPriority')}</option>
+                            <option value="Medium">{t('mediumPriority')}</option>
+                            <option value="Low">{t('lowPriority')}</option>
                         </select>
                         <input
                             type="date"
@@ -284,7 +284,7 @@
                             onchange={(e) => fetchTeamMembers(e.target.value)}
                             bind:value={selectedTeamId}
                         >
-                            <option value="">Select Team</option>
+                            <option value="">{t('selectTeam')}</option>
                             {#each teams as team}<option value={team.teamId}
                                     >{team.teamName}</option
                                 >{/each}
@@ -296,16 +296,16 @@
                         disabled={projectStarted}
                     >
                         {projectStarted
-                            ? "✓ Project Setup"
-                            : "+ Setup Project Steps"}
+                            ? t('projectSetup')
+                            : t('setupProjectSteps')}
                     </button>
                 </div>
 
                 <div class="column">
-                    <h3>Members</h3>
+                    <h3>{t('members')}</h3>
                     {#if selectedProjectId}
                         <div class="current-members">
-                            <h4>Current Members</h4>
+                            <h4>{t('currentMembers')}</h4>
                             <div class="members-grid">
                                 {#each projectMembers as member}
                                     <button class="member-chip active" onclick={() => removeProjectMember(member.userId)}>
@@ -318,7 +318,7 @@
                     {/if}
                     
                     <div class="team-members-selection">
-                        <h4>Add from Team</h4>
+                        <h4>{t('addFromTeam')}</h4>
                         <div class="members-grid">
                             {#each teamMembers as member}
                                 <button
@@ -342,10 +342,10 @@
 
                 <div class="column">
                     <div class="section-header">
-                        <h3>Subtasks</h3>
+                        <h3>{t('subtasks')}</h3>
                         {#if selectedProjectId}
                             <button class="btn-toggle" onclick={() => isTaskFormOpen = !isTaskFormOpen}>
-                                {isTaskFormOpen ? 'Collapse Form ▴' : 'Add New Task ▾'}
+                                {isTaskFormOpen ? t('collapseForm') + ' ▴' : t('addNewTask') + ' ▾'}
                             </button>
                         {/if}
                     </div>
@@ -353,12 +353,12 @@
                     {#if isTaskFormOpen || !selectedProjectId}
                         <div class="input-group" class:disabled-group={!projectStarted}>
                             <input
-                                placeholder="Task Title"
+                                placeholder={t('taskTitle')}
                                 bind:value={newSubtask.taskTitle}
                                 disabled={!projectStarted}
                             />
                             <input
-                                placeholder="Task Description"
+                                placeholder={t('taskDescription')}
                                 bind:value={newSubtask.taskDescription}
                                 disabled={!projectStarted}
                             />
@@ -366,9 +366,9 @@
                                 bind:value={newSubtask.taskPriority} 
                                 disabled={!projectStarted}
                             >
-                                <option value="High">High</option>
-                                <option value="Medium">Medium</option>
-                                <option value="Low">Low</option>
+                                <option value="High">{t('highPriority')}</option>
+                                <option value="Medium">{t('mediumPriority')}</option>
+                                <option value="Low">{t('lowPriority')}</option>
                             </select>
 
                             <input
@@ -381,7 +381,7 @@
                                 bind:value={newSubtask.contributorId}
                                 disabled={!projectStarted}
                             >
-                                <option value="">Select Contributor</option>
+                                <option value="">{t('selectContributor')}</option>
                                 {#each [...projectMembers, ...selectedMembers.filter(sm => !projectMembers.some(pm => pm.userId === sm.userId))] as m}
                                     <option value={m.userId}>{m.firstname}</option>
                                 {/each}
@@ -391,14 +391,14 @@
                                 onclick={addSubtask}
                                 disabled={!projectStarted}
                             >
-                                + Add Sub Task
+                                {t('addSubtask')}
                             </button>
                         </div>
                     {/if}
 
                     <ul class="subtask-preview-list" class:expanded-list={!isTaskFormOpen}>
                         {#each subtasks as s}
-                            <li onclick={() => openEditTask(s)} class="clickable-task">🔑 {s.taskTitle} ({s.taskPriority}) - {s.taskEndDate}</li>
+                            <li onclick={() => openEditTask(s)} class="clickable-task">🔑 {s.taskTitle} ({t(s.taskPriority.toLowerCase() + 'Priority') || s.taskPriority}) - {s.taskEndDate}</li>
                         {/each}
                     </ul>
                 </div>
@@ -406,7 +406,7 @@
 
             <div class="form-actions">
                 <button class="btn btn-primary save-btn" onclick={submitProject}
-                    >Save Project</button
+                    >{t('saveProject')}</button
                 >
             </div>
         </div>
@@ -416,32 +416,32 @@
 {#if showDialog}
     <div class="dialog-overlay">
         <div class="dialog-card">
-            <h2>Edit Subtask</h2>
+            <h2>{t('editSubtask')}</h2>
             <div class="input-group">
-                <label>Title</label>
+                <label>{t('taskTitle')}</label>
                 <input bind:value={editingTask.taskTitle} />
-                <label>Description</label>
+                <label>{t('taskDescription')}</label>
                 <input bind:value={editingTask.taskDescription} />
-                <label>Priority</label>
+                <label>{t('taskPriority')}</label>
                 <select bind:value={editingTask.taskPriority}>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
+                    <option value="High">{t('highPriority')}</option>
+                    <option value="Medium">{t('mediumPriority')}</option>
+                    <option value="Low">{t('lowPriority')}</option>
                 </select>
-                <label>End Date</label>
+                <label>{t('endDate')}</label>
                 <input type="date" bind:value={editingTask.taskEndDate} />
-                <label>Status</label>
+                <label>{t('status')}</label>
                 <select bind:value={editingTask.taskStatus}>
-                    <option value="InProgress">InProgress</option>
-                    <option value="Done">Done</option>
-                    <option value="OnHold">OnHold</option>
-                    <option value="Overdue">Overdue</option>
+                    <option value="InProgress">{t('inProgress')}</option>
+                    <option value="Done">{t('taskCompleted')}</option>
+                    <option value="OnHold">{t('onHold')}</option>
+                    <option value="Overdue">{t('overdue')}</option>
                 </select>
             </div>
             <div class="dialog-actions">
-                <button class="btn btn-secondary" onclick={() => showDialog = false}>Cancel</button>
-                <button class="btn btn-danger" onclick={deleteTask}>Delete</button>
-                <button class="btn btn-primary" onclick={saveEditedTask}>Save</button>
+                <button class="btn btn-secondary" onclick={() => showDialog = false}>{t('cancel')}</button>
+                <button class="btn btn-danger" onclick={deleteTask}>{t('delete')}</button>
+                <button class="btn btn-primary" onclick={saveEditedTask}>{t('save')}</button>
             </div>
         </div>
     </div>
@@ -898,4 +898,3 @@
         color: #991b1b;
     }
 </style>
-

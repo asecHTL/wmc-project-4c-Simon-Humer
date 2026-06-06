@@ -16,7 +16,7 @@
         isLoading = true;
 
         if (!username || !password) {
-            errorMessage = 'Bitte füllen Sie alle Felder aus.';
+            errorMessage = t('fillAllFields');
             isLoading = false;
             return;
         }
@@ -46,11 +46,11 @@
                 goto(`../dashboard?userId=${userData.userId}`);
             } else {
                 const errorText = await response.text();
-                errorMessage = errorText || 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Daten.';
+                errorMessage = errorText || t('loginFailed');
             }
         } catch (error) {
             console.error('Login Error:', error);
-            errorMessage = 'Verbindung zum Server fehlgeschlagen.';
+            errorMessage = t('connectionFailed');
         } finally {
             isLoading = false;
         }
@@ -66,7 +66,7 @@
     <div class="login-card">
         <form onsubmit={handleLogin}>
             <fieldset class="form-group">
-                <legend>Username</legend>
+                <legend>{t('username')}</legend>
                 <input 
                     type="text" 
                     id="username" 
@@ -77,7 +77,7 @@
             </fieldset>
 
             <fieldset class="form-group">
-                <legend>Password</legend>
+                <legend>{t('password')}</legend>
                 <input 
                     type="password" 
                     id="password" 
@@ -93,13 +93,13 @@
 
             <div class="button-wrapper">
                 <button type="submit" disabled={isLoading}>
-                    {isLoading ? 'Lädt...' : 'Login'}
+                    {isLoading ? t('loading') : t('login')}
                 </button>
             </div>
         </form>
 
         <div class="footer">
-            <a href="/register">Don't have an account yet? Register now</a>
+            <a href="/register">{t('noAccountYet')} {t('registerNow')}</a>
         </div>
     </div>
 </div>
