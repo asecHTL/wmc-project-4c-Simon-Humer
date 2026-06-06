@@ -13,6 +13,7 @@
     });
 
     let newHistoryTask = $state({
+        fkUserId: userData.userId,
         historyText: "",
         historyDate: Date.now(),
     });
@@ -97,12 +98,27 @@
             );
 
             if (response.ok) {
-                showDialogTaskHistory = false;
+                const addedEntry = await response.json();
+                // Fetch the username from userData (since the current user added it)
+                const userResponse = await fetch(`http://localhost:3000/profile/user/${userData.userId}`);
+                const user = await userResponse.json();
+                
+                const newEntryForList = {
+                    ...addedEntry,
+                    username: user.username
+                };
+
+                if (historyForTask) {
+                    historyForTask = [newEntryForList, ...historyForTask];
+                } else {
+                    historyForTask = [newEntryForList];
+                }
+
                 newHistoryTask = {
+                    fkUserId: userData.userId,
                     historyText: "",
                     historyDate: Date.now(),
                 };
-                window.location.reload();
             }
         } catch (error) {
             console.error("Error adding task:", error);
@@ -315,6 +331,7 @@
                         {#each historyForTask as singleHistoryTask}
                             <div class="history-item">
                                 <div class="history-item-header">
+                                    <span class="history-user">{singleHistoryTask.username}</span>
                                     <span class="history-date">{new Date(singleHistoryTask.historyDate).toLocaleString()}</span>
                                 </div>
                                 <div class="history-item-content">

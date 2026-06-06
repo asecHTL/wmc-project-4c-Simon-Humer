@@ -60,14 +60,6 @@ await db.exec(`
 `);
 
 await db.exec(`
-    CREATE TABLE IF NOT EXISTS TaskHistory (
-        taskHistoryId INTEGER PRIMARY KEY AUTOINCREMENT,
-        historyText Text not null,
-        historyDate Integer not null
-    )
-`);
-
-await db.exec(`
     CREATE TABLE IF NOT EXISTS Tasks (
         taskId INTEGER PRIMARY KEY AUTOINCREMENT,
         taskTitle TEXT NOT NULL,
@@ -76,10 +68,20 @@ await db.exec(`
         taskEndDate DATE NOT NULL,
         taskStatus Text,
         taskClosed Date,
-        fkTaskHistory Integer,
         fkUserId INTEGER NOT NULL,
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS TaskHistory (
+        taskHistoryId INTEGER PRIMARY KEY AUTOINCREMENT,
+        historyText Text not null,
+        historyDate Integer not null,
+        fkUserId Integer not null,
+        fkTaskId Integer not null,
         FOREIGN KEY (fkUserId) REFERENCES Users(userId),
-        FOREIGN KEY (fkTaskHistory) REFERENCES TaskHistory(taskHistoryId)
+        FOREIGN KEY (fkTaskId) REFERENCES Tasks(taskId)
     )
 `);
 
@@ -299,19 +301,10 @@ for (const pid of projectIds) {
             taskClosedValue = taskDate.toISOString().split('T')[0];
         }
 
-        let taskHistoryId = null;
-        if (Math.random() > 0.3) {
-            const historyResult = await db.run(
-                `INSERT INTO TaskHistory (historyText, historyDate) VALUES (?, ?)`,
-                [`Task initialized with status ${currentStatus}`, Date.now()]
-            );
-            taskHistoryId = historyResult.lastID;
-        }
-
         // 1. Task in der Haupttabelle anlegen (zugewiesen an den User)
         const resultTask = await db.run(
-            `INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, taskClosed, fkTaskHistory, fkUserId)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, taskClosed, fkUserId)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 randomTemplate.taskTitle, 
                 randomTemplate.taskDescription, 
@@ -319,12 +312,18 @@ for (const pid of projectIds) {
                 randomTemplate.taskEndDate, 
                 currentStatus, 
                 taskClosedValue, 
-                taskHistoryId,
                 assignedUser
             ]
         );
         const newTaskId = resultTask.lastID;
         totalTasksCount++;
+
+        if (Math.random() > 0.3) {
+            await db.run(
+                `INSERT INTO TaskHistory (historyText, historyDate, fkUserId, fkTaskId) VALUES (?, ?, ?, ?)`,
+                [`Task initialized with status ${currentStatus}`, Date.now(), assignedUser, newTaskId]
+            );
+        }
 
         // 2. Task als Subtask in die ProjectTasksTable eintragen
         await db.run(

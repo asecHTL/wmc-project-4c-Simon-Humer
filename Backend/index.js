@@ -49,10 +49,8 @@ await db.exec(`
         taskEndDate DATE NOT NULL,
         taskStatus Text,
         taskClosed Date,
-        fkTaskHistory Integer,
         fkUserId INTEGER NOT NULL,
-        FOREIGN KEY (fkUserId) REFERENCES Users(userId),
-        Foreign Key (fkTaskHistory) REFERENCES TaskHistory(taskHistoryId)
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId)
     )
 `);
 
@@ -61,7 +59,11 @@ await db.exec(`
     CREATE TABLE IF NOT EXISTS TaskHistory (
         taskHistoryId INTEGER PRIMARY KEY AUTOINCREMENT,
         historyText Text not null,
-        historyDate Integer not null
+        historyDate Integer not null,
+        fkUserId Integer not null,
+        fkTaskId Integer not null,
+        Foreign key (fkUserId) REFERENCES Users(userId),
+        Foreign key (fkTaskId) REFERENCES Tasks(taskId)
     )
 `);
 
@@ -192,9 +194,8 @@ app.get('/dashboard/personalNextTasks/:userId', async (req, res) => {
     const { limit } = req.query;
 
     let sql = `
-        SELECT t.*, th.historyText, th.historyDate
+        SELECT t.*
         FROM Tasks t
-        LEFT JOIN TaskHistory th ON t.fkTaskHistory = th.taskHistoryId
         WHERE t.fkUserId = ?
     `;
 
@@ -622,28 +623,26 @@ app.post('/projectTaskTable/:projectId', async (req, res) => {
             return res.status(400).send('Missing properties required for Task creation!');
         }
 
-        let taskHistoryId = null;
-        if (historyText) {
-            const historyResult = await db.run(`
-                INSERT INTO TaskHistory (historyText, historyDate) 
-                VALUES (?, ?)
-            `, [historyText, Date.now()]);
-            taskHistoryId = historyResult.lastID;
-        }
-
         const resultTask = await db.run(`
-            INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId, fkTaskHistory) 
-            VALUES (?, ?, ?, ?, ?, ?)
-        `, [taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId, taskHistoryId]);
+            INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId) 
+            VALUES (?, ?, ?, ?, ?)
+        `, [taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId]);
 
         const taskId = resultTask.lastID;
+
+        if (historyText) {
+            await db.run(`
+                INSERT INTO TaskHistory (historyText, historyDate, fkUserId, fkTaskId) 
+                VALUES (?, ?, ?, ?)
+            `, [historyText, Date.now(), fkUserId, taskId]);
+        }
 
         await db.run(`
             INSERT INTO ProjectTasksTable (fkProjectId, fkTaskId) 
             VALUES (?, ?)
         `, [projectId, taskId]);
 
-        return res.json({ fkUserId: fkUserId, fkProjectId: projectId, fkTaskId: taskId, fkTaskHistory: taskHistoryId });
+        return res.json({ fkUserId: fkUserId, fkProjectId: projectId, fkTaskId: taskId });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: "Internal Server Error" });
@@ -701,10 +700,9 @@ app.get('/projectTaskTable/:projectId', async (req, res) => {
     try {
         const projectId = parseInt(req.params.projectId);
         const tasks = await db.all(`
-            SELECT t.*, th.historyText, th.historyDate
+            SELECT t.*
             FROM Tasks t
             JOIN ProjectTasksTable pt ON t.taskId = pt.fkTaskId
-            LEFT JOIN TaskHistory th ON t.fkTaskHistory = th.taskHistoryId
             WHERE pt.fkProjectId = ?
         `, [projectId]);
 
@@ -741,25 +739,20 @@ app.put('/task/:taskId', async (req, res) => {
         const taskId = parseInt(req.params.taskId);
         const { taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId, historyText } = req.body;
 
-        const currentTask = await db.get('SELECT fkTaskHistory FROM Tasks WHERE taskId = ?', [taskId]);
-
-        let taskHistoryId = currentTask ? currentTask.fkTaskHistory : null;
-
         if (historyText) {
-            const historyResult = await db.run(`
-                INSERT INTO TaskHistory (historyText, historyDate) 
-                VALUES (?, ?)
-            `, [historyText, Date.now()]);
-            taskHistoryId = historyResult.lastID;
+            await db.run(`
+                INSERT INTO TaskHistory (historyText, historyDate, fkUserId, fkTaskId) 
+                VALUES (?, ?, ?, ?)
+            `, [historyText, Date.now(), fkUserId, taskId]);
         }
 
         await db.run(`
             UPDATE Tasks 
-            SET taskTitle = ?, taskDescription = ?, taskPriority = ?, taskEndDate = ?, taskStatus = ?, fkUserId = ?, fkTaskHistory = ?
+            SET taskTitle = ?, taskDescription = ?, taskPriority = ?, taskEndDate = ?, taskStatus = ?, fkUserId = ?
             WHERE taskId = ?
-        `, [taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId, taskHistoryId, taskId]);
+        `, [taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId, taskId]);
 
-        res.json({ taskId, taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId, fkTaskHistory: taskHistoryId });
+        res.json({ taskId, taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: "Internal Server Error" });
@@ -829,7 +822,7 @@ app.put('/project/:projectId', async (req, res) => {
 
 app.post('/taskHistoryTable/:taskId',async (req, res) => {
     const taskId = parseInt(req.params.taskId);
-    const { historyText, historyDate } = req.body || {};
+    const {fkUserId, historyText, historyDate } = req.body || {};
 
     if (!taskId || !historyDate || !historyText) {
         return res.status(400).send('taskId, historyDate, historyText are required');
@@ -837,13 +830,11 @@ app.post('/taskHistoryTable/:taskId',async (req, res) => {
 
     try {
         const resultTaskHistory = await db.run(`
-            INSERT INTO TaskHistory (historyText, historyDate) 
-            VALUES (?, ?)
-        `, [historyText, historyDate]);
+            INSERT INTO TaskHistory (fkUserId, historyText, historyDate, fkTaskId) 
+            VALUES (?, ?, ?, ?)
+        `, [fkUserId, historyText, historyDate, taskId]);
 
         const taskHistoryId = resultTaskHistory.lastID;
-
-        await db.run('UPDATE Tasks SET fkTaskHistory = ? WHERE taskId = ?', [taskHistoryId, taskId]);
 
         return res.status(201).json({ taskHistoryId, historyText, historyDate});
     } catch (error) {
@@ -863,10 +854,11 @@ app.get('/taskHistoryTable/:taskId',async (req, res) => {
 
     try {
         const historyForTask = await db.all(`
-            SELECT th.historyText, th.historyDate
-            FROM Tasks t
-            JOIN TaskHistory th ON t.fkTaskHistory = th.taskHistoryId
-            WHERE th.taskHistoryId = ?
+            SELECT th.historyText, th.historyDate, th.fkUserId, u.username
+            FROM TaskHistory th
+            JOIN Users u ON th.fkUserId = u.userId
+            WHERE th.fkTaskId = ?
+            ORDER BY th.historyDate DESC
         `, [taskId]);
 
         return res.json(historyForTask || []);
