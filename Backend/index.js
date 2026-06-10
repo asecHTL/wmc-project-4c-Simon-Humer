@@ -8,6 +8,10 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
 
+
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+
 const dbFilePath = path.join(process.cwd(), 'database.sqlite');
 
 const db = await open({
@@ -109,15 +113,35 @@ await db.exec(`
 `);
 
 const app = express();
-const port = 3000;
+const PORT = 3000;
+
+const httpServer = createServer(app);
+
+
+const io = new Server(httpServer, {
+    cors: {
+        origin: "http://localhost:5173",
+        methods: ["GET", "POST"]
+    }
+});
+
+io.on('connection', (socket) => {
+    console.log(`new client connected: ${socket.id}`);
+    
+    socket.on('identify', (data) => {
+        console.log(`User identified: ${data.username} (ID: ${data.userId})`);
+        socket.username = data.username;
+        socket.userId = data.userId;
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`User disconnected: ${socket.username || 'unknown'} (${socket.id})`);
+    });
+});
 
 app.use(cors());
 
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
-    next();
-});
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -820,9 +844,9 @@ app.put('/project/:projectId', async (req, res) => {
 });
 
 
-app.post('/taskHistoryTable/:taskId',async (req, res) => {
+app.post('/taskHistoryTable/:taskId', async (req, res) => {
     const taskId = parseInt(req.params.taskId);
-    const {fkUserId, historyText, historyDate } = req.body || {};
+    const { fkUserId, historyText, historyDate } = req.body || {};
 
     if (!taskId || !historyDate || !historyText) {
         return res.status(400).send('taskId, historyDate, historyText are required');
@@ -836,7 +860,7 @@ app.post('/taskHistoryTable/:taskId',async (req, res) => {
 
         const taskHistoryId = resultTaskHistory.lastID;
 
-        return res.status(201).json({ taskHistoryId, historyText, historyDate});
+        return res.status(201).json({ taskHistoryId, historyText, historyDate });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: "Internal Server Error" });
@@ -845,10 +869,10 @@ app.post('/taskHistoryTable/:taskId',async (req, res) => {
 
 
 
-app.get('/taskHistoryTable/:taskId',async (req, res) => {
+app.get('/taskHistoryTable/:taskId', async (req, res) => {
     const taskId = parseInt(req.params.taskId);
 
-    if (!taskId ) {
+    if (!taskId) {
         return res.status(400).send('taskId is required');
     }
 
@@ -868,6 +892,6 @@ app.get('/taskHistoryTable/:taskId',async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
+httpServer.listen(PORT, () => {
+    console.log(`backend server listening of port ${PORT}`);
 });

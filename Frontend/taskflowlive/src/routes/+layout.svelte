@@ -5,8 +5,10 @@
   import { goto } from "$app/navigation";
   import { userData } from "$lib/shared/User.svelte.js";
   import { onMount } from "svelte";
+  import { io } from "socket.io-client";
 
   let { children } = $props();
+  let socket;
 
   const links = $derived([
     { href: `/dashboard?userId=${userData.userId}`, label: t("dashboard") || "Dashboard", icon: "ti-layout-dashboard" },
@@ -20,6 +22,8 @@
 
   onMount(async () => {
     if (userData.userId) {
+      socket = io("http://localhost:3000");
+      
       try {
         const res = await fetch(`http://localhost:3000/profile/user/${userData.userId}`);
         if (res.ok) {
@@ -27,9 +31,14 @@
           if (user.language) {
             setLanguage(user.language);
           }
+          
+          socket.emit("identify", {
+            userId: user.userId,
+            username: user.username
+          });
         }
       } catch (e) {
-        console.error("Failed to fetch user language:", e);
+        console.error("Failed to fetch user profile or connect socket:", e);
       }
     }
   });
