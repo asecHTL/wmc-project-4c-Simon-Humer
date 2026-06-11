@@ -76,6 +76,30 @@
             }
         } catch (error) { console.error(error); }
     }
+
+    const statusOrder = ['toDo', 'inProgress', 'review', 'done'];
+
+    async function moveTask(task, direction) {
+        const currentIndex = statusOrder.indexOf(task.taskStatus);
+        const newIndex = currentIndex + direction;
+
+        if (newIndex >= 0 && newIndex < statusOrder.length) {
+            const newStatus = statusOrder[newIndex];
+            try {
+                const response = await fetch(`http://localhost:3000/task/${task.taskId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        ...task,
+                        taskStatus: newStatus
+                    }),
+                });
+                if (response.ok) window.location.reload();
+            } catch (error) {
+                console.error("Error moving task:", error);
+            }
+        }
+    }
 </script>
 
 <div class="container-fluid py-4 h-100 d-flex flex-column">
@@ -124,10 +148,32 @@
                                             <i class="bi bi-journal-text text-muted small"></i>
                                         </div>
                                         <p class="card-text small text-muted mb-3 text-truncate-2">{task.taskDescription}</p>
+
                                         <div class="d-flex justify-content-between align-items-center mt-auto">
-                                            <span class="badge {priorityClasses[task.taskPriority] || 'bg-light'} fw-medium" style="font-size: 0.65rem;">
-                                                {t(task.taskPriority.toLowerCase() + 'Priority') || task.taskPriority}
-                                            </span>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge {priorityClasses[task.taskPriority] || 'bg-light'} fw-medium" style="font-size: 0.65rem;">
+                                                    {t(task.taskPriority.toLowerCase() + 'Priority') || task.taskPriority}
+                                                </span>
+                                                
+                                                <div class="d-flex gap-1 border-start ps-2 ms-1">
+                                                    <button 
+                                                        class="btn btn-link p-0 text-muted text-decoration-none" 
+                                                        style="font-size: 0.75rem;"
+                                                        onclick={(e) => { e.stopPropagation(); moveTask(task, -1); }}
+                                                        disabled={status === 'toDo'}
+                                                    >
+                                                        <i class="bi bi-chevron-left"></i>
+                                                    </button>
+                                                    <button 
+                                                        class="btn btn-link p-0 text-muted text-decoration-none" 
+                                                        style="font-size: 0.75rem;"
+                                                        onclick={(e) => { e.stopPropagation(); moveTask(task, 1); }}
+                                                        disabled={status === 'done'}
+                                                    >
+                                                        <i class="bi bi-chevron-right"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                             <small class="text-muted" style="font-size: 0.7rem;">
                                                 <i class="bi bi-calendar-event me-1"></i> {task.taskEndDate}
                                             </small>
