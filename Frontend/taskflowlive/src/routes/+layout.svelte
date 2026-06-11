@@ -80,7 +80,7 @@
       </nav>
     {/if}
 
-    <main class="col flex-grow-1 overflow-auto bg-white" style="height: 100vh;">
+    <main class="col flex-grow-1 overflow-auto bg-white">
       <div class="container-fluid py-4 mb-5 mb-md-0">
         {@render children()}
       </div>
@@ -90,7 +90,9 @@
 
 <style>
   :global(body) {
-    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    background-color: #fff;
   }
   
   .nav-link {
@@ -103,5 +105,18 @@
 
   main {
     scrollbar-width: thin;
+    /* Ensure content is always scrollable if it exceeds viewport */
+    height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  @media (max-width: 767.98px) {
+    main {
+      /* On mobile, adjust height for the bottom navbar if needed, 
+         though fixed-bottom usually sits on top. 
+         Adding padding-bottom is safer. */
+      height: calc(100dvh - 60px); 
+    }
   }
 </style>
