@@ -1,147 +1,122 @@
 <script>
+  import { t, setLanguage } from "$lib/i18n/i18n.svelte.js";
   import favicon from "$lib/assets/favicon.svg";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { userData } from "$lib/shared/User.svelte.js";
+
   let { children } = $props();
 
-  const links = [
-    { href: "/dashboard", label: "Dashboard", icon: "ti-layout-dashboard" },
-    { href: "/projects", label: "Projects", icon: "ti-folder" },
-    { href: "/tasks", label: "Tasks", icon: "ti-checkbox" },
-    { href: "/team", label: "Team", icon: "ti-users" },
-    { href: "/settings", label: "Settings", icon: "ti-settings" },
-  ];
+  const links = $derived([
+    { href: `/dashboard?userId=${userData.userId}`, label: t("dashboard"), icon: "bi-speedometer2" },
+    { href: `/projects?userId=${userData.userId}`, label: t("projects"), icon: "bi-folder" },
+    { href: `/tasks?userId=${userData.userId}`, label: t("tasks"), icon: "bi-check2-square" },
+    { href: `/team?userId=${userData.userId}`, label: t("team"), icon: "bi-people" },
+    { href: `/settings?userId=${userData.userId}`, label: t("settings"), icon: "bi-gear" },
+  ]);
 
-  let isLoginPage = $derived($page.url.pathname === "/");
+  let isLoginPage = $derived($page.url.pathname === "/" || $page.url.pathname === "/register");
 </script>
 
 <svelte:head>
   <link rel="icon" href={favicon} />
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
-  />
+  <title>Task Flow</title>
 </svelte:head>
 
-<div class="layout">
-  {#if !isLoginPage}
-    <nav class="sidebar">
-      <div class="logo">Task Flow</div>
+<div class="container-fluid p-0">
+  <div class="row g-0 min-vh-100 flex-column flex-md-row">
+    {#if !isLoginPage}
+      <!-- Sidebar for MD and up -->
+      <nav class="col-md-2 col-lg-1 bg-light border-end d-none d-md-flex flex-column align-items-center py-4 sticky-top vh-100">
+        <div class="badge bg-primary p-2 mb-4 fs-6">Task Flow</div>
 
-      {#each links as link}
-        <a
-          href={link.href}
-          class="nav-link"
-          class:active={$page.url.pathname.startsWith(link.href)}
-        >
-          <i class="ti {link.icon}" aria-hidden="true"></i>
-          {link.label}
-        </a>
-      {/each}
+        <div class="nav nav-pills flex-column w-100 px-2 gap-2">
+          {#each links as link}
+            <a
+              href={link.href}
+              class="nav-link text-center py-3 {$page.url.pathname.startsWith(link.href) ? 'active' : 'text-dark'}"
+            >
+              <i class="bi {link.icon} d-block fs-4 mb-1"></i>
+              <span class="small">{link.label}</span>
+            </a>
+          {/each}
+        </div>
 
-      <div class="spacer"></div>
+        <div class="mt-auto w-100 px-2 text-center">
+          <div class="btn-group btn-group-sm mb-3">
+            <button class="btn btn-outline-secondary" onclick={() => setLanguage('en', userData.userId)}>EN</button>
+            <button class="btn btn-outline-secondary" onclick={() => setLanguage('de', userData.userId)}>DE</button>
+          </div>
 
-      <div class="user-block">
-        <button onclick={() => goto("/")}>Logout</button>
-        <div class="avatar">MM</div>
-        <span class="user-name">Max Mustermann</span>
+          <div class="d-flex flex-column align-items-center gap-2 mb-3">
+            <button class="btn btn-link text-danger p-0 fs-4" onclick={() => {
+                userData.userId = 0;
+                if (typeof window !== 'undefined') localStorage.removeItem('userId');
+                goto("/");
+            }} title={t("logout")}>
+              <i class="bi bi-box-arrow-right"></i>
+            </button>
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">MM</div>
+            <span class="small text-muted text-truncate w-100 px-1">Max Mustermann</span>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Bottom Nav for Mobile -->
+      <nav class="navbar fixed-bottom navbar-light bg-light border-top d-md-none p-0">
+        <div class="container-fluid p-0">
+          <div class="nav nav-pills nav-justified w-100">
+            {#each links as link}
+              <a
+                href={link.href}
+                class="nav-link rounded-0 py-2 {$page.url.pathname.startsWith(link.href) ? 'active' : 'text-dark'}"
+              >
+                <i class="bi {link.icon} fs-5"></i>
+                <div style="font-size: 10px;">{link.label}</div>
+              </a>
+            {/each}
+          </div>
+        </div>
+      </nav>
+    {/if}
+
+    <main class="col flex-grow-1 overflow-auto bg-white">
+      <div class="container-fluid py-4 mb-5 mb-md-0">
+        {@render children()}
       </div>
-    </nav>
-  {/if}
-
-  <main class="content">
-    {@render children()}
-  </main>
+    </main>
+  </div>
 </div>
 
 <style>
-  .layout {
-    display: flex;
-    min-height: 100vh;
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    background-color: #fff;
   }
-
-  .sidebar {
-    width: 110px;
-    background-color: #f0f0f0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 1.5rem 0;
-    gap: 0.5rem;
-    flex-shrink: 0;
-  }
-
-  .logo {
-    background: #7f77dd;
-    color: #fff;
-    font-weight: 500;
-    font-size: 14px;
-    border-radius: 8px;
-    padding: 10px 16px;
-    margin-bottom: 1.5rem;
-    text-align: center;
-  }
-
+  
   .nav-link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    width: 80px;
-    padding: 10px 8px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 12px;
-    color: #555;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .nav-link:not(.active):hover {
+    background-color: rgba(0,0,0,0.05);
   }
 
-  .nav-link :global(.ti) {
-    font-size: 20px;
+  main {
+    scrollbar-width: thin;
+    /* Ensure content is always scrollable if it exceeds viewport */
+    height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
-  .nav-link:hover {
-    background: #e0e0e0;
-    color: #333;
-  }
-
-  .nav-link.active {
-    background: #eeedfe;
-    color: #534ab7;
-  }
-
-  .spacer {
-    flex: 1;
-  }
-
-  .user-block {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    margin-bottom: 0.5rem;
-  }
-
-  .avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #ddd;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 500;
-    color: #555;
-  }
-
-  .user-name {
-    font-size: 11px;
-    color: #555;
-    text-align: center;
-  }
-
-  .content {
-    flex: 1;
-    padding: 2rem;
+  @media (max-width: 767.98px) {
+    main {
+      /* On mobile, adjust height for the bottom navbar if needed, 
+         though fixed-bottom usually sits on top. 
+         Adding padding-bottom is safer. */
+      height: calc(100dvh - 60px); 
+    }
   }
 </style>

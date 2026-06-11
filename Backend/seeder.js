@@ -12,7 +12,108 @@ const db = await open({
     driver: sqlite3.Database
 });
 
-// ── Users ────────────────────────────────────────────────────────────────────
+console.log('🧹 Dropping old tables to ensure schema matches...');
+await db.exec(`
+    DROP TABLE IF EXISTS ProjectTasksTable;
+    DROP TABLE IF EXISTS ProjectUserTable;
+    DROP TABLE IF EXISTS TeamUserTable;
+    DROP TABLE IF EXISTS Tasks;
+    DROP TABLE IF EXISTS TaskHistory;
+    DROP TABLE IF EXISTS Projects;
+    DROP TABLE IF EXISTS Team;
+    DROP TABLE IF EXISTS Users;
+`);
+
+console.log('🛠️ Creating tables...');
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS Users (
+        userId INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        firstname TEXT NOT NULL,
+        lastname TEXT NOT NULL,
+        birthday DATE,
+        language Text
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS Team (
+        teamId INTEGER PRIMARY KEY AUTOINCREMENT,
+        teamName Text,
+        adminId Integer not null,
+        teamCreationDate Date not null
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS Projects (
+        projectId INTEGER PRIMARY KEY AUTOINCREMENT,
+        projectName TEXT NOT NULL,
+        projectPriority TEXT NOT NULL,
+        projectEndDate DATE NOT NULL,
+        projectStatus Text not null,
+        fkTeamId Integer,
+        FOREIGN KEY (fkTeamId) REFERENCES Team(teamId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS Tasks (
+        taskId INTEGER PRIMARY KEY AUTOINCREMENT,
+        taskTitle TEXT NOT NULL,
+        taskDescription TEXT NOT NULL,
+        taskPriority TEXT NOT NULL,
+        taskEndDate DATE NOT NULL,
+        taskStatus Text,
+        taskClosed Date,
+        fkUserId INTEGER NOT NULL,
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS TaskHistory (
+        taskHistoryId INTEGER PRIMARY KEY AUTOINCREMENT,
+        historyText Text not null,
+        historyDate Integer not null,
+        fkUserId Integer not null,
+        fkTaskId Integer not null,
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId),
+        FOREIGN KEY (fkTaskId) REFERENCES Tasks(taskId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS TeamUserTable (
+        teamUserId INTEGER PRIMARY KEY AUTOINCREMENT,
+        fkUserId Integer not null,
+        fkTeamId Integer not null,
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId),
+        FOREIGN KEY (fkTeamId) REFERENCES Team(teamId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS ProjectUserTable (
+        projectUserTableId INTEGER PRIMARY KEY AUTOINCREMENT,
+        fkProjectId INTEGER NOT NULL,
+        fkUserId INTEGER NOT NULL,
+        FOREIGN KEY (fkUserId) REFERENCES Users(userId),
+        FOREIGN KEY (fkProjectId) REFERENCES Projects(projectId)
+    )
+`);
+
+await db.exec(`
+    CREATE TABLE IF NOT EXISTS ProjectTasksTable (
+        ProjectTasksTableId INTEGER PRIMARY KEY AUTOINCREMENT,
+        fkProjectId INTEGER NOT NULL,
+        fkTaskId INTEGER NOT NULL,
+        FOREIGN KEY (fkProjectId) REFERENCES Projects(projectId),
+        FOREIGN KEY (fkTaskId) REFERENCES Tasks(taskId)
+    )
+`);
 
 const rawUsers = [
     { username: 'maxmuster',   email: 'max.muster@example.com',   password: 'Password1!', firstname: 'Max',      lastname: 'Mustermann', birthday: '1990-04-12' },
@@ -29,17 +130,49 @@ console.log('🌱 Seeding Users...');
 const userIds = [];
 for (const u of rawUsers) {
     const hashed = await bcrypt.hash(u.password, 10);
-    await db.run(
-        `INSERT OR IGNORE INTO Users (username, email, password, firstname, lastname, birthday)
+    const result = await db.run(
+        `INSERT INTO Users (username, email, password, firstname, lastname, birthday)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [u.username, u.email, hashed, u.firstname, u.lastname, u.birthday]
     );
-    const row = await db.get('SELECT userId FROM Users WHERE username = ?', [u.username]);
-    userIds.push(row.userId);
+    userIds.push(result.lastID);
 }
 console.log(`   ✓ ${userIds.length} Users`);
 
-// ── Projects ─────────────────────────────────────────────────────────────────
+
+console.log('🌱 Seeding Teams...');
+const teamIds = [];
+const teamData = [
+    { adminId: userIds[0], teamName: 'Team1', teamCreationDate: '2025-01-10' },
+    { adminId: userIds[2], teamName: 'Team2', teamCreationDate: '2025-02-15' },
+    { adminId: userIds[4], teamName: 'Team3', teamCreationDate: '2025-03-20' },
+];
+
+for (const t of teamData) {
+    const result = await db.run(
+        `INSERT INTO Team (adminId, teamName, teamCreationDate) VALUES (?, ?, ?)`,
+        [t.adminId, t.teamName, t.teamCreationDate]
+    );
+    teamIds.push(result.lastID);
+}
+console.log(`   ✓ ${teamIds.length} Teams`);
+
+
+console.log('🌱 Seeding TeamUserTable...');
+let tuCount = 0;
+for (let i = 0; i < teamIds.length; i++) {
+    const tid = teamIds[i];
+    const members = userIds.slice(i * 2, (i * 2) + 4);
+    for (const uid of members) {
+        await db.run(
+            `INSERT INTO TeamUserTable (fkUserId, fkTeamId) VALUES (?, ?)`,
+            [uid, tid]
+        );
+        tuCount++;
+    }
+}
+console.log(`   ✓ ${tuCount} TeamUser assignments`);
+
 
 const projects = [
     { projectName: 'Website Relaunch',         projectPriority: 'High',   projectEndDate: '2025-06-30' },
@@ -54,65 +187,122 @@ const projects = [
 
 console.log('🌱 Seeding Projects...');
 const projectIds = [];
-for (const p of projects) {
-    await db.run(
-        `INSERT OR IGNORE INTO Projects (projectName, projectPriority, projectEndDate)
-         VALUES (?, ?, ?)`,
-        [p.projectName, p.projectPriority, p.projectEndDate]
+for (let i = 0; i < projects.length; i++) {
+    const p = projects[i];
+    const teamId = Math.random() > 0.25 ? teamIds[i % teamIds.length] : null;
+    
+    // Dynamische Statusbestimmung für Projekte
+    let projectStatus = 'InProgress';
+    const today = new Date();
+    const endDate = new Date(p.projectEndDate);
+
+    if (endDate < today) {
+        // Wenn das Enddatum in der Vergangenheit liegt
+        projectStatus = Math.random() > 0.3 ? 'Done' : 'Overdue';
+    } else {
+        // Wenn das Enddatum in der Zukunft liegt
+        projectStatus = Math.random() > 0.2 ? 'InProgress' : 'OnHold';
+    }
+
+    // Zusätzlicher Zufallsfaktor, um sicherzustellen, dass definitiv alle Stati vorkommen
+    if (i === 0) projectStatus = 'Done';
+    if (i === 1) projectStatus = 'Overdue';
+    if (i === 2) projectStatus = 'OnHold';
+    if (i === 3) projectStatus = 'InProgress';
+
+    const result = await db.run(
+        `INSERT INTO Projects (projectName, projectPriority, projectEndDate, projectStatus, fkTeamId)
+         VALUES (?, ?, ?, ?, ?)`,
+        [p.projectName, p.projectPriority, p.projectEndDate, projectStatus, teamId]
     );
-    const row = await db.get('SELECT projectId FROM Projects WHERE projectName = ?', [p.projectName]);
-    projectIds.push(row.projectId);
+    projectIds.push(result.lastID);
 }
 console.log(`   ✓ ${projectIds.length} Projects`);
 
-// ── Tasks ─────────────────────────────────────────────────────────────────────
+
+console.log('🌱 Seeding ProjectUserTable...');
+let puCount = 0;
+// Map, um schnell nachschlagen zu können, welche User in welchem Projekt arbeiten
+const projectUsersMap = new Map();
+
+for (let i = 0; i < projectIds.length; i++) {
+    const pid = projectIds[i];
+    const assigned = userIds.slice(0, (i % 4) + 2);
+    projectUsersMap.set(pid, assigned);
+
+    for (const uid of assigned) {
+        await db.run(
+            `INSERT INTO ProjectUserTable (fkProjectId, fkUserId) VALUES (?, ?)`,
+            [pid, uid]
+        );
+        puCount++;
+    }
+}
+console.log(`   ✓ ${puCount} ProjectUser assignments`);
+
 
 const taskTemplates = [
-    { taskTitle: 'UI/UX Design Review',        taskDescription: 'Review the latest Figma mockups and provide feedback.',         taskPriority: 'High',   taskEndDate: '2025-05-10', defaultStatus: 'Done' },
-    { taskTitle: 'Client Meeting Preparation',  taskDescription: 'Prepare agenda and slides for the upcoming client call.',      taskPriority: 'High',   taskEndDate: '2025-05-12', defaultStatus: 'Done' },
-    { taskTitle: 'Project Review',              taskDescription: 'Conduct mid-sprint project review with the full team.',        taskPriority: 'Medium', taskEndDate: '2025-05-14', defaultStatus: 'Done' },
-    { taskTitle: 'Write Unit Tests',            taskDescription: 'Add unit tests for the authentication module.',                taskPriority: 'Medium', taskEndDate: '2025-05-20', defaultStatus: 'InProgress' },
-    { taskTitle: 'Database Schema Migration',   taskDescription: 'Migrate legacy schema to the new normalized structure.',       taskPriority: 'High',   taskEndDate: '2025-05-25', defaultStatus: 'InProgress' },
-    { taskTitle: 'Update API Documentation',    taskDescription: 'Update Swagger docs to reflect the latest endpoint changes.',  taskPriority: 'Low',    taskEndDate: '2025-06-01', defaultStatus: 'InProgress' },
-    { taskTitle: 'Performance Profiling',       taskDescription: 'Profile the dashboard load time and identify bottlenecks.',   taskPriority: 'Medium', taskEndDate: '2025-06-05', defaultStatus: 'OnHold' },
-    { taskTitle: 'Accessibility Audit',         taskDescription: 'Run WCAG 2.1 AA audit on all public-facing pages.',           taskPriority: 'Low',    taskEndDate: '2025-06-10', defaultStatus: 'OnHold' },
-    { taskTitle: 'Integrate Payment Gateway',   taskDescription: 'Connect Stripe API for subscription billing.',                taskPriority: 'High',   taskEndDate: '2025-04-30', defaultStatus: 'Overdue' },
-    { taskTitle: 'Fix Login Redirect Bug',      taskDescription: 'Users are not being redirected correctly after OAuth login.', taskPriority: 'High',   taskEndDate: '2025-04-28', defaultStatus: 'Overdue' },
-    { taskTitle: 'Deploy Staging Environment',  taskDescription: 'Set up Docker-based staging server on AWS EC2.',              taskPriority: 'Medium', taskEndDate: '2025-05-18', defaultStatus: 'Done' },
-    { taskTitle: 'Code Review Sprint 7',        taskDescription: 'Review all PRs opened during sprint 7.',                      taskPriority: 'Low',    taskEndDate: '2025-05-22', defaultStatus: 'InProgress' },
-    { taskTitle: 'Design Email Templates',      taskDescription: 'Create branded HTML email templates for notifications.',      taskPriority: 'Low',    taskEndDate: '2025-06-15', defaultStatus: 'OnHold' },
-    { taskTitle: 'Security Pen Test',           taskDescription: 'Schedule and coordinate third-party penetration testing.',    taskPriority: 'High',   taskEndDate: '2025-05-01', defaultStatus: 'Overdue' },
-    { taskTitle: 'Refactor State Management',   taskDescription: 'Replace Redux with Zustand in the frontend app.',             taskPriority: 'Medium', taskEndDate: '2025-07-01', defaultStatus: 'InProgress' },
+    { taskTitle: 'UI/UX Design Review',        taskDescription: 'Review the latest Figma mockups and provide feedback.',         taskPriority: 'High',   taskEndDate: '2026-05-10', defaultStatus: 'done' },
+    { taskTitle: 'Client Meeting Preparation',  taskDescription: 'Prepare agenda and slides for the upcoming client call.',      taskPriority: 'High',   taskEndDate: '2026-05-12', defaultStatus: 'done' },
+    { taskTitle: 'Project Review',              taskDescription: 'Conduct mid-sprint project review with the full team.',        taskPriority: 'Medium', taskEndDate: '2026-05-14', defaultStatus: 'done' },
+    { taskTitle: 'Write Unit Tests',            taskDescription: 'Add unit tests for the authentication module.',                taskPriority: 'Medium', taskEndDate: '2026-05-20', defaultStatus: 'inProgress' },
+    { taskTitle: 'Database Schema Migration',   taskDescription: 'Migrate legacy schema to the new normalized structure.',       taskPriority: 'High',   taskEndDate: '2026-05-25', defaultStatus: 'inProgress' },
+    { taskTitle: 'Update API Documentation',     taskDescription: 'Update Swagger docs to reflect the latest endpoint changes.',  taskPriority: 'Low',    taskEndDate: '2026-03-01', defaultStatus: 'inProgress' },
+    { taskTitle: 'Performance Profiling',       taskDescription: 'Profile the dashboard load time and identify bottlenecks.',   taskPriority: 'Medium', taskEndDate: '2026-03-05', defaultStatus: 'review' },
+    { taskTitle: 'Accessibility Audit',         taskDescription: 'Run WCAG 2.1 AA audit on all public-facing pages.',            taskPriority: 'Low',    taskEndDate: '2026-02-10', defaultStatus: 'review' },
+    { taskTitle: 'Integrate Payment Gateway',   taskDescription: 'Connect Stripe API for subscription billing.',                taskPriority: 'High',   taskEndDate: '2026-04-30', defaultStatus: 'overdue' },
+    { taskTitle: 'Fix Login Redirect Bug',      taskDescription: 'Users are not being redirected correctly after OAuth login.', taskPriority: 'High',   taskEndDate: '2026-04-28', defaultStatus: 'overdue' },
+    { taskTitle: 'Deploy Staging Environment',  taskDescription: 'Set up Docker-based staging server on AWS EC2.',              taskPriority: 'Medium', taskEndDate: '2026-05-18', defaultStatus: 'done' },
+    { taskTitle: 'Code Review Sprint 7',        taskDescription: 'Review all PRs opened during sprint 7.',                      taskPriority: 'Low',    taskEndDate: '2026-05-22', defaultStatus: 'inProgress' },
+    { taskTitle: 'Design Email Templates',      taskDescription: 'Create branded HTML email templates for notifications.',      taskPriority: 'Low',    taskEndDate: '2026-05-28', defaultStatus: 'toDo' },
+    { taskTitle: 'Security Pen Test',           taskDescription: 'Schedule and coordinate third-party penetration testing.',    taskPriority: 'High',   taskEndDate: '2026-05-01', defaultStatus: 'overdue' },
+    { taskTitle: 'Refactor State Management',   taskDescription: 'Replace Redux with Zustand in the frontend app.',             taskPriority: 'Medium', taskEndDate: '2026-01-01', defaultStatus: 'inProgress' },
 ];
 
-console.log('🌱 Seeding Tasks...');
-const taskIds = [];
+console.log('🌱 Seeding Tasks & ProjectTasksTable...');
+let totalTasksCount = 0;
+let ptCount = 0;
 
-for (const u of userIds) {
-    // 1. Bestimme eine zufällige Anzahl an Tasks für DIESEN Nutzer (z.B. zwischen 10 und 20)
-    const numberOfTasksForUser = Math.floor(Math.random() * 11) + 10;
+// Wir gehen durch jedes Projekt durch
+for (const pid of projectIds) {
+    // Hole die User, die diesem Projekt zugewiesen sind
+    const assignedUsers = projectUsersMap.get(pid) || [];
+    
+    // Jedes Projekt bekommt zwischen 5 und 15 Subtasks zugewiesen
+    const subTasksForProject = Math.floor(Math.random() * 11) + 5;
 
-    for (let i = 0; i < numberOfTasksForUser; i++) {
-        // Such dir ein zufälliges Template aus der Liste
+    for (let j = 0; j < subTasksForProject; j++) {
         const randomTemplate = taskTemplates[Math.floor(Math.random() * taskTemplates.length)];
         
+        // Wähle zufällig einen User aus, der am Projekt arbeitet, um ihm den Task zuzuweisen
+        const assignedUser = assignedUsers[Math.floor(Math.random() * assignedUsers.length)];
+
         let currentStatus = randomTemplate.defaultStatus;
         let taskClosedValue = null;
 
-        // 2. Erhöhe die Chance auf "Done" massiv (z.B. 65% Chance, dass der Task erledigt ist)
-        if (Math.random() < 0.65) {
-            currentStatus = 'Done';
+        if (Math.random() < 0.60) {
+            currentStatus = 'done';
+        } else if (Math.random() < 0.1) {
+            currentStatus = 'review';
+        } else if (Math.random() < 0.1) {
+            currentStatus = 'toDo';
         }
 
-        // Wenn der Task erledigt ist, generieren wir ein zufälliges Abschlussdatum im Mai 2025
-        if (currentStatus === 'Done') {
-            // Zufälliger Tag zwischen 1 und 28 (um Probleme mit dem Monatsende zu vermeiden)
-            const randomDay = Math.floor(Math.random() * 28) + 1;
-            const dayString = String(randomDay).padStart(2, '0');
-            taskClosedValue = `2025-05-${dayString}`;
+        if (currentStatus === 'done') {
+            const now = new Date();
+            const randomDaysAgo = Math.floor(Math.random() * 45);
+            
+            let effectiveDaysAgo = randomDaysAgo;
+            if (Math.random() < 0.3) {
+                effectiveDaysAgo = Math.floor(randomDaysAgo / 7) * 7; 
+            }
+
+            const taskDate = new Date(now.getTime() - effectiveDaysAgo * 24 * 60 * 60 * 1000);
+            taskClosedValue = taskDate.toISOString().split('T')[0];
         }
 
-        const result = await db.run(
+        // 1. Task in der Haupttabelle anlegen (zugewiesen an den User)
+        const resultTask = await db.run(
             `INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, taskClosed, fkUserId)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
@@ -122,46 +312,30 @@ for (const u of userIds) {
                 randomTemplate.taskEndDate, 
                 currentStatus, 
                 taskClosedValue, 
-                u
+                assignedUser
             ]
         );
-        taskIds.push(result.lastID);
-    }
-}
-console.log(`   ✓ ${taskIds.length} Gesamt-Tasks verteilt generiert.`);
+        const newTaskId = resultTask.lastID;
+        totalTasksCount++;
 
-// ── ProjectUserTable ──────────────────────────────────────────────────────────
+        if (Math.random() > 0.3) {
+            await db.run(
+                `INSERT INTO TaskHistory (historyText, historyDate, fkUserId, fkTaskId) VALUES (?, ?, ?, ?)`,
+                [`Task initialized with status ${currentStatus}`, Date.now(), assignedUser, newTaskId]
+            );
+        }
 
-console.log('🌱 Seeding ProjectUserTable...');
-let puCount = 0;
-for (let i = 0; i < projectIds.length; i++) {
-    const assigned = userIds.slice(0, (i % 4) + 2);
-    for (const uid of assigned) {
-        await db.run(
-            `INSERT INTO ProjectUserTable (fkProjectId, fkUserId) VALUES (?, ?)`,
-            [projectIds[i], uid]
-        );
-        puCount++;
-    }
-}
-console.log(`   ✓ ${puCount} ProjectUser assignments`);
-
-// ── ProjectTasksTable ─────────────────────────────────────────────────────────
-
-console.log('🌱 Seeding ProjectTasksTable...');
-let ptCount = 0;
-for (let i = 0; i < projectIds.length; i++) {
-    const start = (i * 6) % taskIds.length;
-    for (let j = 0; j < 6; j++) {
-        const tid = taskIds[(start + j) % taskIds.length];
+        // 2. Task als Subtask in die ProjectTasksTable eintragen
         await db.run(
             `INSERT INTO ProjectTasksTable (fkProjectId, fkTaskId) VALUES (?, ?)`,
-            [projectIds[i], tid]
+            [pid, newTaskId]
         );
         ptCount++;
     }
 }
-console.log(`   ✓ ${ptCount} ProjectTask assignments`);
+
+console.log(`   ✓ ${totalTasksCount} Tasks generiert und erfolgreich als Projektsubtasks verknüpft.`);
+console.log(`   ✓ ${ptCount} ProjectTask-Relationen erstellt.`);
 
 console.log('\n✅ Database seeding complete!');
 await db.close();

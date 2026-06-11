@@ -1,5 +1,6 @@
 <script>
     import { goto } from "$app/navigation";
+    import { t, setLanguage } from "$lib/i18n/i18n.svelte.js";
 
     let { data } = $props();
     import { userData } from "$lib/shared/User.svelte.js";
@@ -11,8 +12,7 @@
         birthday: data.user?.birthday ?? '',
         username: data.user?.username ?? '',
         email: data.user?.email ?? '',
-        password: data.user?.password ?? '',
-        language: data.user?.language ?? 'Englisch'
+        password: data.user?.password ?? ''
     });
 
     $effect(() => {
@@ -23,240 +23,103 @@
             userForm.username = data.user.username ?? '';
             userForm.email = data.user.email ?? '';
             userForm.password = data.user.password ?? '';
-            userForm.language = data.user.language ?? 'Englisch';
         }
     });
 
     async function saveUserSettings() {
-        console.log("Speichere:", userForm);
         const res = await fetch(`http://localhost:3000/profile/user/${userData.userId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json' 
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userForm)
             });
 
             if (res.ok) {
-                alert("Einstellungen erfolgreich gespeichert!");
+                alert(t("settingsSaved"));
                 goto('../settings')
             } else {
                 const errData = await res.json().catch(() => ({}));
-                alert(`Fehler beim Speichern: ${errData.error || res.statusText}`);
+                alert(`${t("errorSaving")}: ${errData.error || res.statusText}`);
             }
-        
     }
 
     async function deleteUser() {
-        if(confirm("Möchtest du diesen Benutzer wirklich löschen?")) {
+        if(confirm(t("confirmDelete"))) {
             const userId = data.user?.userId;
-            console.log("Lösche User:", userId);
-            
-            if (!userId) {
-                alert("Fehler: Keine User-ID gefunden.");
-                return;
-            }
+            if (!userId) { alert(t("missingUserId")); return; }
 
             const res = await fetch(`http://localhost:3000/profile/user/${userId}`, {
                 method: 'DELETE' 
             });
 
             if (res.ok) {
-                alert("Benutzer erfolgreich gelöscht!");
+                alert(t("deleteSuccess"));
                 goto('/'); 
             } else {
                 const errData = await res.json().catch(() => ({}));
-                alert(`Fehler beim Löschen: ${errData.error || res.statusText}`);
+                alert(`${t("errorDeleting")}: ${errData.error || res.statusText}`);
             }
         }
     }
 </script>
 
-<div class="settings-container">
-  
+<div class="container-fluid py-4">
+    <h1 class="h2 mb-4">{t('settings')}</h1>
 
-    <div class="card">
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="firstname">Firstname</label>
-                <input type="text" id="firstname" bind:value={userForm.firstname} placeholder="Value" />
-            </div>
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4 p-lg-5">
+            <div class="row g-4">
+                <div class="col-12 col-xl-9">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="firstname">{t("firstname")}</label>
+                            <input class="form-control" type="text" id="firstname" bind:value={userForm.firstname} placeholder="Value" />
+                        </div>
 
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" bind:value={userForm.username} placeholder="Value" />
-            </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="username">{t("username")}</label>
+                            <input class="form-control" type="text" id="username" bind:value={userForm.username} placeholder="Value" />
+                        </div>
 
-            <div class="form-group">
-                <label for="language">Language</label>
-                <div class="select-wrapper">
-                    <select id="language" bind:value={userForm.language}>
-                        <option value="Englisch">Englisch</option>
-                        <option value="Deutsch">Deutsch</option>
-                    </select>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="lastname">{t("lastname")}</label>
+                            <input class="form-control" type="text" id="lastname" bind:value={userForm.lastname} placeholder="Value" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="email">{t("email")}</label>
+                            <input class="form-control" type="email" id="email" bind:value={userForm.email} placeholder="Value" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="birthday">{t("birthday")}</label>
+                            <input class="form-control" type="text" id="birthday" bind:value={userForm.birthday} placeholder="Value" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="password">{t("password")}</label>
+                            <input class="form-control" type="password" id="password" bind:value={userForm.password} placeholder="Value" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-3 d-flex flex-column gap-2 justify-content-start border-start-xl ps-xl-4">
+                    <h6 class="fw-bold text-secondary text-uppercase small mb-3">{t('actions')}</h6>
+                    <button onclick={saveUserSettings} class="btn btn-success d-flex align-items-center justify-content-between px-3 py-2">
+                        <span>{t("save")}</span>
+                        <i class="bi bi-floppy ms-2"></i>
+                    </button>
+                    <button onclick={deleteUser} class="btn btn-outline-danger d-flex align-items-center justify-content-between px-3 py-2 mt-2">
+                        <span>{t("deleteAccount")}</span>
+                        <i class="bi bi-trash ms-2"></i>
+                    </button>
                 </div>
             </div>
-
-            <div class="form-group">
-                <label for="lastname">Lastname</label>
-                <input type="text" id="lastname" bind:value={userForm.lastname} placeholder="Value" />
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" bind:value={userForm.email} placeholder="Value" />
-            </div>
-
-            <div class="empty-space"></div>
-
-            <div class="form-group">
-                <label for="birthday">Birthday</label>
-                <input type="text" id="birthday" bind:value={userForm.birthday} placeholder="Value" />
-            </div>
-
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" bind:value={userForm.password} placeholder="Value" />
-            </div>
-        </div>
-
-        <div class="action-buttons">
-            <button onclick={deleteUser} class="btn-delete">
-                Delete <i class="ti ti-trash"></i>
-            </button>
-            <button onclick={saveUserSettings} class="btn-save">
-                Save <i class="ti ti-device-floppy"></i>
-            </button>
         </div>
     </div>
 </div>
 
 <style>
-    .settings-container {
-        font-family: system-ui, -apple-system, sans-serif;
-        max-width: 1100px;
-        margin: 0 auto;
-    }
-
-    .header-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
-
-    .header-row h1 {
-        font-size: 28px;
-        font-weight: 700;
-        margin: 0;
-        color: #000;
-    }
-
-    .btn-new-member {
-        background-color: #93a5e6;
-        color: #1a233a;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-weight: 500;
-        font-size: 13px;
-        cursor: pointer;
-    }
-
-    .card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 2.5rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 3rem;
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        column-gap: 2.5rem;
-        row-gap: 1.5rem;
-        flex: 1;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .form-group label {
-        font-size: 14px;
-        color: #4a4a4a;
-        font-weight: 500;
-    }
-
-    .form-group input, 
-    .form-group select {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 10px 14px;
-        font-size: 14px;
-        color: #333;
-        outline: none;
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    .form-group input::placeholder {
-        color: #a0aec0;
-    }
-
-    .select-wrapper {
-        position: relative;
-        width: 100%;
-    }
-
-    .form-group select {
-        appearance: none; 
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%234a4a4a' stroke-width='2' viewBox='0 0 24 24'><path d='M6 9l6 6 6-6'/></svg>");
-        background-repeat: no-repeat;
-        background-position: right 14px center;
-        padding-right: 35px;
-        cursor: pointer;
-    }
-
-    .action-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        min-width: 110px;
-        margin-top: 1.5rem; 
-    }
-
-    .action-buttons button {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 8px 14px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 500;
-        border: none;
-        cursor: pointer;
-        width: 100%;
-    }
-
-    .btn-delete {
-        background-color: #fbc4c4;
-        color: #721c24;
-    }
-
-    .btn-save {
-        background-color: #e2fcd4;
-        color: #155724;
-    }
-
-    .action-buttons button i {
-        font-size: 16px;
+    @media (min-width: 1200px) {
+        .border-start-xl { border-left: 1px solid #dee2e6 !important; }
     }
 </style>
