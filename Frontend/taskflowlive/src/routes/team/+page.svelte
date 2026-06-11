@@ -13,32 +13,18 @@
     );
 
     async function fetchTeamMembers(teamId) {
-        if (!teamId) {
-            teamMembers = [];
-            return;
-        }
+        if (!teamId) { teamMembers = []; return; }
         try {
             const response = await fetch(`http://localhost:3000/team/${teamId}/members`);
-            if (response.ok) {
-                teamMembers = await response.json();
-            } else {
-                teamMembers = [];
-            }
-        } catch (error) {
-            console.error("Error fetching team members:", error);
-            teamMembers = [];
-        }
+            if (response.ok) teamMembers = await response.json();
+        } catch (error) { console.error(error); }
     }
 
     async function fetchAllUsers() {
         try {
             const response = await fetch("http://localhost:3000/users");
-            if (response.ok) {
-                allUsers = await response.json();
-            }
-        } catch (error) {
-            console.error("Error fetching users:", error);
-        }
+            if (response.ok) allUsers = await response.json();
+        } catch (error) { console.error(error); }
     }
 
     async function addMemberToTeam(userId) {
@@ -50,19 +36,12 @@
             if (response.ok) {
                 await fetchTeamMembers(selectedTeamId);
                 showAddMemberDialog = false;
-            } else {
-                const errorText = await response.text();
-                alert(errorText || "Failed to add member");
             }
-        } catch (error) {
-            console.error("Error adding member:", error);
-        }
+        } catch (error) { console.error(error); }
     }
 
     $effect(() => {
-        if (selectedTeamId) {
-            fetchTeamMembers(selectedTeamId);
-        }
+        if (selectedTeamId) fetchTeamMembers(selectedTeamId);
     });
 
     function openAddMemberDialog() {
@@ -71,205 +50,94 @@
     }
 </script>
 
+<div class="container-fluid py-4">
+    <h1 class="h2 mb-4">{t('team')}</h1>
 
-<h1>{t('team')}</h1>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-6 col-lg-4">
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-2" for="team-select">{t('teamSelection')}</label>
+                    <select class="form-select" id="team-select" bind:value={selectedTeamId}>
+                        <option value="" disabled selected>{t('selectTeam')}</option>
+                        {#each data.teamsForUser as team}
+                            <option value="{team.teamId}">{team.teamName}</option>
+                        {/each}
+                    </select>
+                </div>
 
-<div class="team-header">
-    <div>
-        <label for="team-select">{t('teamSelection')}</label>
-        <select id="team-select" bind:value={selectedTeamId}>
-            <option value="" disabled selected>{t('selectTeam')}</option>
-            {#each data.teamsForUser as team}
-                <option value="{team.teamId}">{team.teamName}</option>
-            {/each}
-        </select>
+                {#if selectedTeamId && isUserAdmin}
+                    <div class="col-12 col-md-auto">
+                        <button class="btn btn-primary px-4 fw-bold" onclick={openAddMemberDialog}>
+                            <i class="bi bi-person-plus me-2"></i> {t('addMember')}
+                        </button>
+                    </div>
+                {/if}
+            </div>
+        </div>
     </div>
 
-    {#if selectedTeamId && isUserAdmin}
-        <button class="add-btn" onclick={openAddMemberDialog}>
-            <i class="ti ti-plus"></i> {t('addMember')}
-        </button>
+    {#if selectedTeamId}
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-transparent border-0 pt-4 px-4">
+                <h5 class="card-title mb-0">{t('teamMembers')}</h5>
+            </div>
+            <div class="card-body p-4">
+                {#if teamMembers.length > 0}
+                    <div class="list-group list-group-flush border rounded overflow-hidden">
+                        {#each teamMembers as member}
+                            <div class="list-group-item d-flex align-items-center py-3">
+                                <div class="badge bg-primary-subtle text-primary rounded-circle p-2 me-3 fs-6" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                    {member.firstname[0]}{member.lastname[0]}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{member.firstname} {member.lastname}</div>
+                                    <div class="small text-muted">{member.email} <span class="mx-1">•</span> @{member.username}</div>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                {:else}
+                    <div class="text-center py-5 text-muted fst-italic">
+                        <i class="bi bi-people fs-1 d-block mb-2"></i>
+                        {t('noMembersFound')}
+                    </div>
+                {/if}
+            </div>
+        </div>
     {/if}
 </div>
 
-{#if selectedTeamId}
-    <div class="members-section">
-        <h2>{t('teamMembers')}</h2>
-        {#if teamMembers.length > 0}
-            <ul>
-                {#each teamMembers as member}
-                    <li>
-                        <strong>{member.firstname} {member.lastname}</strong> ({member.username})
-                        <br>
-                        <small>{member.email}</small>
-                    </li>
-                {/each}
-            </ul>
-        {:else}
-            <p>{t('noMembersFound')}</p>
-        {/if}
-    </div>
-{/if}
-
 {#if showAddMemberDialog}
-    <div class="modal-overlay" onclick={() => (showAddMemberDialog = false)}>
-        <div class="modal-content" onclick={(e) => e.stopPropagation()}>
-            <div class="modal-header">
-                <h2>{t('addTeamMember')}</h2>
-                <button class="close-btn" onclick={() => (showAddMemberDialog = false)}>&times;</button>
-            </div>
-            <div class="user-list">
-                {#each allUsers as user}
-                    {#if !teamMembers.find(m => m.userId === user.userId)}
-                        <button class="user-item" onclick={() => addMemberToTeam(user.userId)}>
-                            <div class="user-info">
-                                <strong>{user.firstname} {user.lastname}</strong>
-                                <span>{user.username}</span>
-                            </div>
-                            <small>{user.email}</small>
-                        </button>
-                    {/if}
-                {/each}
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">{t('addTeamMember')}</h5>
+                    <button class="btn-close" onclick={() => (showAddMemberDialog = false)}></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="list-group list-group-flush border rounded" style="max-height: 400px; overflow-auto: auto;">
+                        {#each allUsers as user}
+                            {#if !teamMembers.find(m => m.userId === user.userId)}
+                                <button class="list-group-item list-group-item-action d-flex align-items-center py-3" onclick={() => addMemberToTeam(user.userId)}>
+                                    <div class="badge bg-light text-muted rounded-circle p-2 me-3 border">
+                                        {user.firstname[0]}{user.lastname[0]}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold small">{user.firstname} {user.lastname}</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">@{user.username} • {user.email}</div>
+                                    </div>
+                                    <i class="bi bi-plus-circle text-primary"></i>
+                                </button>
+                            {/if}
+                        {/each}
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-4 px-4">
+                    <button class="btn btn-light" onclick={() => (showAddMemberDialog = false)}>{t('cancel')}</button>
+                </div>
             </div>
         </div>
     </div>
 {/if}
-
-<style>
-    .team-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        margin-bottom: 2rem;
-    }
-
-    .add-btn {
-        background: #7f77dd;
-        color: white;
-        border: none;
-        padding: 0.6rem 1.2rem;
-        border-radius: 8px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 500;
-        transition: background 0.2s;
-    }
-
-    .add-btn:hover {
-        background: #6a61c4;
-    }
-
-    .members-section {
-        margin-top: 2rem;
-    }
-    ul {
-        list-style-type: none;
-        padding: 0;
-    }
-    li {
-        background: #f9f9f9;
-        margin-bottom: 0.5rem;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #eee;
-    }
-    select {
-        padding: 0.5rem;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-        width: 100%;
-        max-width: 300px;
-        margin-top: 0.5rem;
-    }
-    label {
-        display: block;
-        font-weight: bold;
-    }
-
-    /* Modal Styles */
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .modal-content {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 500px;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 1rem;
-    }
-
-    .modal-header h2 {
-        margin: 0;
-        font-size: 1.25rem;
-    }
-
-    .close-btn {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: #999;
-    }
-
-    .user-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .user-item {
-        background: none;
-        border: 1px solid #eee;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        text-align: left;
-        cursor: pointer;
-        transition: background 0.2s, border-color 0.2s;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .user-item:hover {
-        background: #f0f0ff;
-        border-color: #7f77dd;
-    }
-
-    .user-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .user-info span {
-        font-size: 0.85rem;
-        color: #666;
-    }
-
-    small {
-        color: #888;
-    }
-</style>

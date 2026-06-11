@@ -14,6 +14,7 @@
     let teamMembers = $state([]);
     let selectedMembers = $state([]);
     let subtasks = $state([]);
+    
     let newSubtask = $state({
         taskTitle: "",
         taskDescription: "",
@@ -499,12 +500,18 @@
         gap: 2rem;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
         .existing-projects {
             grid-template-columns: 1fr;
         }
         .form-row {
             grid-template-columns: 1fr !important;
+        }
+        .form-actions {
+            justify-content: center;
+        }
+        .save-btn {
+            width: 100%;
         }
     }
 

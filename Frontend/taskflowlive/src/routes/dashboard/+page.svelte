@@ -15,41 +15,41 @@
 
     const statusMeta = $derived({
         done: {
-            icon: "✓",
-            color: "#5bc4a0",
-            bg: "#e0f5ed",
+            icon: "bi-check-circle",
+            color: "text-success",
+            bg: "bg-success-subtle",
             label: t("taskCompleted"),
         },
         inProgress: {
-            icon: "🕐",
-            color: "#e6b84a",
-            bg: "#fdf3d7",
+            icon: "bi-clock",
+            color: "text-warning",
+            bg: "bg-warning-subtle",
             label: t("inProgress"),
         },
         toDo: {
-            icon: "📋",
-            color: "#4a90e2",
-            bg: "#e1f0ff",
+            icon: "bi-list-task",
+            color: "text-primary",
+            bg: "bg-primary-subtle",
             label: t("toDo") || "To Do",
         },
         review: {
-            icon: "👁",
-            color: "#e8924a",
-            bg: "#fdebd7",
+            icon: "bi-eye",
+            color: "text-info",
+            bg: "bg-info-subtle",
             label: t("review") || "Review",
         },
         overdue: {
-            icon: "⊖",
-            color: "#a07eda",
-            bg: "#ede5f8",
+            icon: "bi-exclamation-circle",
+            color: "text-danger",
+            bg: "bg-danger-subtle",
             label: t("overdue"),
         },
     });
 
     const priorityColors = {
-        High: "#e05c5c",
-        Medium: "#e6b84a",
-        Low: "#5bc4a0",
+        High: "#dc3545", // Bootstrap danger
+        Medium: "#ffc107", // Bootstrap warning
+        Low: "#198754", // Bootstrap success
     };
 
     let canvas = $state(null);
@@ -93,15 +93,9 @@
                         legend: {
                             position: "bottom",
                             labels: {
-                                font: { family: "'DM Sans', sans-serif", size: 12 },
+                                font: { size: 12 },
                                 boxWidth: 12,
                                 padding: 15,
-                            },
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) =>
-                                    ` ${context.label}: ${context.raw} ${t("tasks")}`,
                             },
                         },
                     },
@@ -118,30 +112,12 @@
                         {
                             label: t("tasks"),
                             data: progressValues,
-                            backgroundColor: "#5bc4a0",
-                            borderRadius: 6,
-                            backgroundColor: (context) => {
-                                const ctx = context.chart.ctx;
-                                const gradient = ctx.createLinearGradient(
-                                    0,
-                                    0,
-                                    0,
-                                    220,
-                                );
-                                gradient.addColorStop(
-                                    0,
-                                    "rgba(59, 130, 246, 0.3)",
-                                );
-                                gradient.addColorStop(
-                                    1,
-                                    "rgba(59, 130, 246, 0.0)",
-                                );
-                                return gradient;
-                            },
+                            backgroundColor: "rgba(13, 110, 253, 0.1)",
+                            borderColor: "#0d6efd",
                             fill: true,
                             tension: 0.1,
-                            pointRadius:5,
-                            pointHoverRadius:7,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
                         },
                     ],
                 },
@@ -152,30 +128,8 @@
                         legend: { display: false },
                     },
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                display: false
-                            }
-                        },
-                        x:{
-                            display : true,
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                autoSkip: false,
-                                maxRotation: 45,
-                                minRotation: 45,
-                                callback: function(val, index) {
-                                    const filter = new URL(window.location.href).searchParams.get('taskGraphDate') || '1M';
-                                    if (filter === '1W') return this.getLabelForValue(val);
-                                    if (filter === '1M') return index % 2 === 0 ? this.getLabelForValue(val) : '';
-                                    if (filter === '1Y') return index % 3 === 0 ? this.getLabelForValue(val) : '';
-                                    return this.getLabelForValue(val);
-                                }
-                            }
-                        }
+                        y: { beginAtZero: true },
+                        x: { display: true }
                     },
                 },
             });
@@ -197,249 +151,114 @@
         if (chartProgress) {
             chartProgress.data.labels = progressLabels;
             chartProgress.data.datasets[0].data = progressValues;
-            chartProgress.data.datasets[0].label = t("tasks");
             chartProgress.update();
         }
     });
 </script>
 
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0">{t("dashboard")}</h1>
+    </div>
 
-
-<div class="dashboard">
-    <h1>{t("dashboard")}</h1>
-
-    <div class="grid">
-        <div class="card">
-            <h2>{t("upcomingTasks")}</h2>
-            <ul class="task-list">
-                {#each data.upComingTasks as task}
-                    <li class="task-item">
-                        <span class="task-icon">📅</span>
-                        <span>{task.taskTitle}</span>
-                    </li>
-                {:else}
-                    <li class="task-item muted">{t("noTasksFound")}</li>
-                {/each}
-            </ul>
-        </div>
-
-        <div class="card">
-            <h2>{t("personalOverview")}</h2>
-            <div class="overview-grid">
-                {#each data.overviewPersonalTasks as item}
-                    {@const meta = statusMeta[item.status] ?? {
-                        icon: "?",
-                        color: "#888",
-                        bg: "#eee",
-                        label: item.status,
-                    }}
-                    <div class="overview-item">
-                        <div
-                            class="overview-icon"
-                            style="background:{meta.bg}; color:{meta.color}"
-                        >
-                            {meta.icon}
-                        </div>
-                        <div class="overview-count">{item.count}</div>
-                        <div class="overview-label">{meta.label}</div>
+    <div class="row g-4">
+        <!-- Upcoming Tasks -->
+        <div class="col-12 col-xl-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="card-title mb-0">{t("upcomingTasks")}</h5>
+                </div>
+                <div class="card-body px-4">
+                    <div class="list-group list-group-flush">
+                        {#each data.upComingTasks as task}
+                            <div class="list-group-item d-flex align-items-center px-0 border-0 mb-2">
+                                <div class="badge bg-light text-primary p-2 me-3">
+                                    <i class="bi bi-calendar-event"></i>
+                                </div>
+                                <span class="text-secondary small fw-medium">{task.taskTitle}</span>
+                            </div>
+                        {:else}
+                            <div class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                {t("noTasksFound")}
+                            </div>
+                        {/each}
                     </div>
-                {/each}
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>{t("tasksByPriority")}</h2>
-            <div class="chart-wrapper">
-                <canvas bind:this={canvas}></canvas>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h2>{t("doneTasks")}</h2>
-                <div class="filter-buttons">
-                    <button 
-                        class:active={$page.url.searchParams.get('taskGraphDate') === '1W'} 
-                        onclick={() => updateFilter('1W')}
-                    >
-                        {t("week")}
-                    </button>
-                    <button 
-                        class:active={!$page.url.searchParams.get('taskGraphDate') || $page.url.searchParams.get('taskGraphDate') === '1M'} 
-                        onclick={() => updateFilter('1M')}
-                    >
-                        {t("month")}
-                    </button>
-                    <button 
-                        class:active={$page.url.searchParams.get('taskGraphDate') === '1Y'} 
-                        onclick={() => updateFilter('1Y')}
-                    >
-                        {t("year")}
-                    </button>
                 </div>
             </div>
-            <div class="placeholder">
-                <canvas bind:this={canvasProgress}></canvas>
+        </div>
+
+        <!-- Personal Overview -->
+        <div class="col-12 col-xl-8">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="card-title mb-0">{t("personalOverview")}</h5>
+                </div>
+                <div class="card-body px-4">
+                    <div class="row g-3">
+                        {#each data.overviewPersonalTasks as item}
+                            {@const meta = statusMeta[item.status] ?? { icon: "bi-question", color: "text-secondary", bg: "bg-light", label: item.status }}
+                            <div class="col-6 col-md-4 col-lg">
+                                <div class="p-3 rounded-4 {meta.bg} h-100 d-flex flex-column align-items-center text-center">
+                                    <div class="fs-4 {meta.color} mb-1">
+                                        <i class="bi {meta.icon}"></i>
+                                    </div>
+                                    <div class="h3 fw-bold mb-0">{item.count}</div>
+                                    <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">{meta.label}</div>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks by Priority -->
+        <div class="col-12 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-transparent border-0 pt-4 px-4">
+                    <h5 class="card-title mb-0">{t("tasksByPriority")}</h5>
+                </div>
+                <div class="card-body px-4">
+                    <div style="height: 250px;">
+                        <canvas bind:this={canvas}></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Chart -->
+        <div class="col-12 col-lg-8">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">{t("doneTasks")}</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button 
+                            class="btn btn-outline-primary { $page.url.searchParams.get('taskGraphDate') === '1W' ? 'active' : '' }" 
+                            onclick={() => updateFilter('1W')}
+                        >{t("week")}</button>
+                        <button 
+                            class="btn btn-outline-primary { !$page.url.searchParams.get('taskGraphDate') || $page.url.searchParams.get('taskGraphDate') === '1M' ? 'active' : '' }" 
+                            onclick={() => updateFilter('1M')}
+                        >{t("month")}</button>
+                        <button 
+                            class="btn btn-outline-primary { $page.url.searchParams.get('taskGraphDate') === '1Y' ? 'active' : '' }" 
+                            onclick={() => updateFilter('1Y')}
+                        >{t("year")}</button>
+                    </div>
+                </div>
+                <div class="card-body px-4">
+                    <div style="height: 250px;">
+                        <canvas bind:this={canvasProgress}></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-    @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap");
-
-    .dashboard {
-        font-family: "DM Sans", sans-serif;
-        background: #f0f2f7;
-        min-height: 100vh;
-        padding: 2rem;
-        color: #1a1a2e;
-    }
-
-    h1 {
-        font-size: 2rem;
-        font-weight: 600;
-        margin: 0 0 2rem;
-    }
-
-    h2 {
-        font-size: 1rem;
-        font-weight: 600;
-        margin: 0 0 1.25rem;
-        color: #1a1a2e;
-    }
-
-    .grid {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 1.25rem;
-    }
-
-    .card {
-        background: #fff;
-        border-radius: 16px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.25rem;
-    }
-
-    .card-header h2 {
-        margin-bottom: 0;
-    }
-
-    .filter-buttons {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .filter-buttons button {
-        background: #f3f4f6;
-        border: 1px solid #e5e7eb;
-        padding: 4px 12px;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        cursor: pointer;
-        color: #6b7280;
-        transition: all 0.2s;
-    }
-
-    .filter-buttons button:hover {
-        background: #e5e7eb;
-    }
-
-    .filter-buttons button.active {
-        background: #7f77dd;
-        color: white;
-        border-color: #7f77dd;
-    }
-
-    .chart-wrapper {
-        position: relative;
-        width: 100%;
-        height: 220px;
-        margin: auto 0;
-    }
-
-    .task-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .task-item {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-size: 0.95rem;
-        color: #374151;
-    }
-
-    .task-icon {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
-        background: #f0f0e0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.85rem;
-        flex-shrink: 0;
-    }
-
-    .muted {
-        color: #9ca3af;
-    }
-
-    .overview-grid {
-        display: flex;
-        gap: 2rem;
-        flex-wrap: wrap;
-    }
-
-    .overview-item {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.4rem;
-    }
-
-    .overview-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-        font-weight: 600;
-    }
-
-    .overview-count {
-        font-size: 1.4rem;
-        font-weight: 600;
-        line-height: 1;
-    }
-
-    .overview-label {
-        font-size: 0.78rem;
-        color: #9ca3af;
-    }
-
-    .placeholder {
-        color: #9ca3af;
-        font-size: 0.9rem;
-        padding: 2rem 0;
-        text-align: center;
-    }
+  .rounded-4 {
+    border-radius: 1rem !important;
+  }
 </style>

@@ -1,14 +1,12 @@
 <script>
     import { goto } from '$app/navigation';
+    import { userData } from '$lib/shared/User.svelte.js';
+    import { t, setLanguage } from '$lib/i18n/i18n.svelte.js';
 
     let username = $state('');
     let password = $state('');
     let errorMessage = $state('');
     let isLoading = $state(false);
-
-    import { userData } from '$lib/shared/User.svelte.js';
-
-    import { t, setLanguage } from '$lib/i18n/i18n.svelte.js';
 
     async function handleLogin(event) {
         event.preventDefault();
@@ -24,32 +22,21 @@
         try {
             const response = await fetch('http://localhost:3000/user/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
             });
 
             if (response.ok) {
                 const user = await response.json();
-                console.log('Login erfolgreich:', user);
-                
                 userData.userId = user.userId
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('userId', user.userId);
-                }
-                if (user.language) {
-                    setLanguage(user.language);
-                }
-
-                
+                if (typeof window !== 'undefined') localStorage.setItem('userId', user.userId);
+                if (user.language) setLanguage(user.language);
                 goto(`../dashboard?userId=${userData.userId}`);
             } else {
                 const errorText = await response.text();
                 errorMessage = errorText || t('loginFailed');
             }
         } catch (error) {
-            console.error('Login Error:', error);
             errorMessage = t('connectionFailed');
         } finally {
             isLoading = false;
@@ -57,167 +44,67 @@
     }
 </script>
 
- 
-
-
-<div class="login-container">
-    <h1 class="main-title">Task Flow</h1>
+<div class="container d-flex flex-column align-items-center justify-content-center min-vh-100 py-5">
+    <h1 class="display-4 fw-bold mb-5 text-primary">Task Flow</h1>
     
-    <div class="login-card">
-        <form onsubmit={handleLogin}>
-            <fieldset class="form-group">
-                <legend>{t('username')}</legend>
-                <input 
-                    type="text" 
-                    id="username" 
-                    bind:value={username} 
-                    placeholder="Input"
-                    required
-                />
-            </fieldset>
+    <div class="card shadow-lg border-0 rounded-4 w-100" style="max-width: 500px;">
+        <div class="card-body p-5">
+            <h2 class="h4 fw-bold mb-4 text-center">{t('login')}</h2>
+            
+            <form onsubmit={handleLogin}>
+                <div class="form-floating mb-3">
+                    <input 
+                        type="text" 
+                        class="form-control bg-light border-0" 
+                        id="username" 
+                        bind:value={username} 
+                        placeholder="Username"
+                        required
+                    />
+                    <label for="username">{t('username')}</label>
+                </div>
 
-            <fieldset class="form-group">
-                <legend>{t('password')}</legend>
-                <input 
-                    type="password" 
-                    id="password" 
-                    bind:value={password} 
-                    placeholder="Input"
-                    required
-                />
-            </fieldset>
+                <div class="form-floating mb-4">
+                    <input 
+                        type="password" 
+                        class="form-control bg-light border-0" 
+                        id="password" 
+                        bind:value={password} 
+                        placeholder="Password"
+                        required
+                    />
+                    <label for="password">{t('password')}</label>
+                </div>
 
-            {#if errorMessage}
-                <p class="error">{errorMessage}</p>
-            {/if}
+                {#if errorMessage}
+                    <div class="alert alert-danger py-2 small text-center mb-4" role="alert">
+                        {errorMessage}
+                    </div>
+                {/if}
 
-            <div class="button-wrapper">
-                <button type="submit" disabled={isLoading}>
-                    {isLoading ? t('loading') : t('login')}
-                </button>
+                <div class="d-grid">
+                    <button class="btn btn-dark btn-lg fw-bold py-3" type="submit" disabled={isLoading}>
+                        {#if isLoading}
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            {t('loading')}
+                        {:else}
+                            {t('login')}
+                        {/if}
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-4 text-center">
+                <a href="/register" class="text-decoration-none small text-muted">
+                    {t('noAccountYet')} <span class="text-primary fw-bold">{t('registerNow')}</span>
+                </a>
             </div>
-        </form>
-
-        <div class="footer">
-            <a href="/register">{t('noAccountYet')} {t('registerNow')}</a>
         </div>
     </div>
 </div>
 
-//Sytel wurde mit KI gemacht
-
-
 <style>
     :global(body) {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: #f0f2f5;
-    }
-
-    .login-container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        padding: 20px;
-        box-sizing: border-box;
-    }
-
-    .main-title {
-        font-size: 32px;
-        font-weight: bold;
-        color: #000000;
-        margin-bottom: 40px;
-        text-align: center;
-    }
-
-    .login-card {
-        background: white;
-        padding: 60px 40px;
-        border-radius: 24px;
-        width: 100%;
-        max-width: 650px;
-        box-sizing: border-box;
-    }
-
-    .form-group {
-        border: 1px solid #999999;
-        border-radius: 6px;
-        margin-bottom: 30px;
-        padding: 0 12px;
-        background: transparent;
-    }
-
-    legend {
-        font-size: 14px;
-        color: #8a6d9f;
-        padding: 0 6px;
-        font-weight: 500;
-    }
-
-    input {
-        width: 100%;
-        border: none;
-        padding: 14px 4px;
-        font-size: 18px;
-        color: #333333;
-        background: transparent;
-        box-sizing: border-box;
-    }
-
-    input:focus {
-        outline: none;
-    }
-
-    .button-wrapper {
-        display: flex;
-        justify-content: center;
-        margin-top: 40px;
-    }
-
-    button {
-        background-color: #222222;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 12px 32px;
-        font-size: 16px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-    button:hover:not(:disabled) {
-        background-color: #444444;
-    }
-
-    button:disabled {
-        background-color: #cccccc;
-        cursor: not-allowed;
-    }
-
-    .error {
-        color: #d0021b;
-        background-color: #fff5f5;
-        padding: 10px;
-        border-radius: 4px;
-        font-size: 14px;
-        margin-bottom: 20px;
-        text-align: center;
-    }
-
-    .footer {
-        margin-top: 24px;
-        text-align: center;
-    }
-
-    .footer a {
-        color: #3b82f6;
-        text-decoration: none;
-        font-size: 13px;
-    }
-
-    .footer a:hover {
-        text-decoration: underline;
+        background-color: #f8f9fa;
     }
 </style>

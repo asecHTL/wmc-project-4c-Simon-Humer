@@ -100,7 +100,6 @@
 
             if (response.ok) {
                 const addedEntry = await response.json();
-                // Fetch the username from userData (since the current user added it)
                 const userResponse = await fetch(`http://localhost:3000/profile/user/${userData.userId}`);
                 const user = await userResponse.json();
                 
@@ -377,14 +376,7 @@
             sans-serif;
         background-color: #f3f4f9;
         color: #1f2937;
-    }
-
-    :global(.main-content) {
-        display: flex;
-        flex-direction: column;
-        padding: 40px;
-        box-sizing: border-box;
-        height: 100vh;
+        overflow: hidden;
     }
 
     /* --- TASK CARD SELECTION --- */
@@ -728,7 +720,31 @@
         display: flex;
         gap: 20px;
         flex: 1;
-        overflow: hidden;
+        overflow-x: auto;
+        padding-bottom: 1rem;
+    }
+
+    @media (max-width: 1024px) {
+        .board {
+            flex-direction: column;
+            overflow: visible;
+        }
+
+        .toDo, .inProgress, .review, .done {
+            height: auto;
+            min-height: 300px;
+            max-height: 500px;
+        }
+
+        .header {
+            flex-wrap: wrap;
+        }
+
+        .searchBar {
+            width: 100%;
+            margin-left: 0;
+            order: 4;
+        }
     }
 
     /* --- SPALTEN --- */
