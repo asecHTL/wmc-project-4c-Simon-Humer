@@ -154,6 +154,22 @@
             chartProgress.update();
         }
     });
+    const overviewWithDefaults = $derived(() => {
+        const defaults = [
+            { status: "toDo", count: 0 },
+            { status: "inProgress", count: 0 },
+            { status: "review", count: 0 },
+            { status: "done", count: 0 },
+            { status: "overdue", count: 0 }
+        ];
+        
+        if (!data.overviewPersonalTasks || data.overviewPersonalTasks.length === 0) return defaults;
+        
+        return defaults.map(d => {
+            const found = data.overviewPersonalTasks.find(item => item.status === d.status);
+            return found ? found : d;
+        });
+    });
 </script>
 
 <div class="container-fluid">
@@ -170,7 +186,7 @@
                 </div>
                 <div class="card-body px-4">
                     <div class="list-group list-group-flush">
-                        {#each data.upComingTasks as task}
+                        {#each data.upComingTasks || [] as task}
                             <div class="list-group-item d-flex align-items-center px-0 border-0 mb-2">
                                 <div class="badge bg-light text-primary p-2 me-3">
                                     <i class="bi bi-calendar-event"></i>
@@ -196,7 +212,7 @@
                 </div>
                 <div class="card-body px-4">
                     <div class="row g-3">
-                        {#each data.overviewPersonalTasks as item}
+                        {#each overviewWithDefaults() as item}
                             {@const meta = statusMeta[item.status] ?? { icon: "bi-question", color: "text-secondary", bg: "bg-light", label: item.status }}
                             <div class="col-6 col-md-4 col-lg">
                                 <div class="p-3 rounded-4 {meta.bg} h-100 d-flex flex-column align-items-center text-center">

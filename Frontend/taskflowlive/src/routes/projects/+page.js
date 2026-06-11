@@ -10,16 +10,10 @@ export async function load({ url, fetch }) {
 
     try {
         const response = await fetch(`http://localhost:3000/projects/${userId}`);
-        
-        if (!response.ok) {
-            throw error(500, 'Failed to fetch projects');
-        }
-
-        const projects = await response.json();
+        const projects = response.ok ? await response.json() : [];
         return { projects };
     } catch (e) {
-        if (e.status) throw e;
         console.error('Projects load error:', e);
-        throw error(500, 'Internal Server Error');
+        return { projects: [] };
     }
 }

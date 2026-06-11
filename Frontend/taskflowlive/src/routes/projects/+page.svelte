@@ -14,7 +14,7 @@
     let teamMembers = $state([]);
     let selectedMembers = $state([]);
     let subtasks = $state([]);
-    
+
     let newSubtask = $state({
         taskTitle: "",
         taskDescription: "",
@@ -172,59 +172,75 @@
     }
 
     async function submitProject() {
-        if (!newProject.projectName) return;
-        
-        const isUpdate = !!selectedProjectId;
-        const url = isUpdate 
-            ? `http://localhost:3000/project/${selectedProjectId}`
-            : `http://localhost:3000/project/${userData.userId}`;
-        const method = isUpdate ? 'PUT' : 'POST';
+    if (!newProject.projectName) return;
+    
+    const isUpdate = !!selectedProjectId;
+    const url = isUpdate 
+        ? `http://localhost:3000/project/${selectedProjectId}`
+        : `http://localhost:3000/project/${userData.userId}`;
+    const method = isUpdate ? 'PUT' : 'POST';
 
-        console.log(`${isUpdate ? 'Updating' : 'Creating'} project...`, { ...newProject, fkTeamId: selectedTeamId });
-        
-        try {
-            const res = await fetch(url, {
-                method: method,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...newProject, fkTeamId: selectedTeamId }),
-            });
+    console.log(`${isUpdate ? 'Updating' : 'Creating'} project...`, { ...newProject, fkTeamId: selectedTeamId });
+    
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...newProject, fkTeamId: selectedTeamId }),
+        });
 
-            if (!res.ok) {
-                const errorData = await res.json();
-                console.error("Project action failed:", errorData);
-                return;
-            }
-
-            const data = await res.json();
-            const projectId = isUpdate ? selectedProjectId : data.fkProjectId;
-            console.log(`Project ${isUpdate ? 'updated' : 'created'} with ID:`, projectId);
-
-            for (const m of selectedMembers) {
-                if (!projectMembers.some(pm => pm.userId === m.userId)) {
-                    await fetch(
-                        `http://localhost:3000/projectUserTable/${projectId}?userId=${m.userId}`,
-                        { method: "POST" },
-                    );
-                }
-            }
-
-            for (const s of subtasks) {
-                if (!s.taskId) {
-                    await fetch(
-                        `http://localhost:3000/projectTaskTable/${projectId}`,
-                        {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ ...s, fkUserId: s.contributorId }),
-                        },
-                    );
-                }
-            }
-            window.location.reload();
-        } catch (error) {
-            console.error("Error during project submission:", error);
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            console.error("Project action failed:", errorData);
+            return;
         }
+
+        let projectId = selectedProjectId;
+        
+        if (!isUpdate) {
+            const data = await res.json();
+            projectId = data.fkProjectId;
+        } else {
+         
+            const text = await res.text();
+            console.log("Server response for update:", text);
+        }
+
+        console.log(`Project ${isUpdate ? 'updated' : 'created'} with ID:`, projectId);
+
+        for (const m of selectedMembers) {
+            if (!projectMembers.some(pm => pm.userId === m.userId)) {
+                await fetch(
+                    `http://localhost:3000/projectUserTable/${projectId}?userId=${m.userId}`,
+                    { method: "POST" },
+                );
+            }
+        }
+
+        for (const s of subtasks) {
+            if (!s.taskId) {
+                const taskData = { 
+                    ...s, 
+                    fkUserId: s.contributorId,
+                    taskStatus: 'toDo'
+                };
+                console.log("Creating project subtask:", taskData);
+                await fetch(
+                    `http://localhost:3000/projectTaskTable/${projectId}`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(taskData),
+                    },
+                );
+            }
+        }
+        
+        window.location.reload();
+    } catch (error) {
+        console.error("Error during project submission:", error);
     }
+}
 </script>
 
 <div class="page-container">

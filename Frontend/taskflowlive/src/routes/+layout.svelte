@@ -8,11 +8,11 @@
   let { children } = $props();
 
   const links = $derived([
-    { href: "/dashboard", label: t("dashboard"), icon: "bi-speedometer2" },
-    { href: "/projects", label: t("projects"), icon: "bi-folder" },
-    { href: "/tasks", label: t("tasks"), icon: "bi-check2-square" },
-    { href: "/team", label: t("team"), icon: "bi-people" },
-    { href: "/settings", label: t("settings"), icon: "bi-gear" },
+    { href: `/dashboard?userId=${userData.userId}`, label: t("dashboard"), icon: "bi-speedometer2" },
+    { href: `/projects?userId=${userData.userId}`, label: t("projects"), icon: "bi-folder" },
+    { href: `/tasks?userId=${userData.userId}`, label: t("tasks"), icon: "bi-check2-square" },
+    { href: `/team?userId=${userData.userId}`, label: t("team"), icon: "bi-people" },
+    { href: `/settings?userId=${userData.userId}`, label: t("settings"), icon: "bi-gear" },
   ]);
 
   let isLoginPage = $derived($page.url.pathname === "/" || $page.url.pathname === "/register");

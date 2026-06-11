@@ -648,9 +648,9 @@ app.post('/projectTaskTable/:projectId', async (req, res) => {
         }
 
         const resultTask = await db.run(`
-            INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId) 
-            VALUES (?, ?, ?, ?, ?)
-        `, [taskTitle, taskDescription, taskPriority, taskEndDate, fkUserId]);
+            INSERT INTO Tasks (taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [taskTitle, taskDescription, taskPriority, taskEndDate, 'toDo', fkUserId]);
 
         const taskId = resultTask.lastID;
 
