@@ -1,8 +1,30 @@
 <script>
     import { userData } from "$lib/shared/User.svelte";
     import { t } from "$lib/i18n/i18n.svelte.js";
+    import { onMount } from "svelte";
+    import { io } from "socket.io-client";
 
     let { data } = $props();
+    let socket = $state();
+
+    onMount(() => {
+        socket = io("http://localhost:3000");
+
+        socket.on("connect", () => {
+            console.log("Connected to WebSocket");
+            socket.emit("identify", { userId: userData.userId });
+        });
+
+        socket.on("taskMoved", (updatedTask) => {
+            console.log("Task move detected via WebSocket:", updatedTask);
+            // Refresh window to sync all data including counts
+            window.location.reload();
+        });
+
+        return () => {
+            if (socket) socket.disconnect();
+        };
+    });
 
     let newTask = $state({
         taskTitle: "",

@@ -777,6 +777,8 @@ app.put('/task/:taskId', async (req, res) => {
             WHERE taskId = ?
         `, [taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId, taskId]);
 
+        io.emit('taskMoved', { taskId, taskStatus, fkUserId });
+
         res.json({ taskId, taskTitle, taskDescription, taskPriority, taskEndDate, taskStatus, fkUserId });
     } catch (error) {
         console.error(error);
