@@ -4,11 +4,14 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import { userData } from "$lib/shared/User.svelte.js";
-  import { onMount } from "svelte";
+  import { onMount, setContext } from "svelte";
   import { io } from "socket.io-client";
+  import { invalidateAll } from "$app/navigation";
 
   let { children } = $props();
-  let socket;
+  let socket = $state();
+
+  setContext("socket", { get socket() { return socket; } });
 
   const links = $derived([
     { href: `/dashboard?userId=${userData.userId}`, label: t("dashboard") || "Dashboard", icon: "ti-layout-dashboard" },
@@ -24,6 +27,14 @@
     if (userData.userId) {
       socket = io("http://localhost:3000");
       
+      socket.on("historyChanged", () => {
+        invalidateAll();
+      });
+
+      socket.on("projectChanged", () => {
+        invalidateAll();
+      });
+
       try {
         const res = await fetch(`http://localhost:3000/profile/user/${userData.userId}`);
         if (res.ok) {

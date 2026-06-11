@@ -768,6 +768,7 @@ app.put('/task/:taskId', async (req, res) => {
                 INSERT INTO TaskHistory (historyText, historyDate, fkUserId, fkTaskId) 
                 VALUES (?, ?, ?, ?)
             `, [historyText, Date.now(), fkUserId, taskId]);
+            io.emit('historyChanged', { taskId });
         }
 
         await db.run(`
@@ -790,6 +791,7 @@ app.delete('/task/:taskId', async (req, res) => {
         const result = await db.run('DELETE FROM Tasks WHERE taskId = ?', [taskId]);
 
         if (result.changes > 0) {
+            io.emit('historyChanged', { taskId });
             res.status(204).send();
         } else {
             res.status(404).send('Task not found');
@@ -833,6 +835,7 @@ app.put('/project/:projectId', async (req, res) => {
         `, [projectName, projectPriority, projectEndDate, projectStatus || 'InProgress', fkTeamId, projectId]);
 
         if (result.changes > 0) {
+            io.emit('projectChanged', { projectId });
             res.json({ projectId, projectName, projectPriority, projectEndDate, projectStatus, fkTeamId });
         } else {
             res.status(404).send('Project not found');
@@ -859,6 +862,7 @@ app.post('/taskHistoryTable/:taskId', async (req, res) => {
         `, [fkUserId, historyText, historyDate, taskId]);
 
         const taskHistoryId = resultTaskHistory.lastID;
+        io.emit('historyChanged', { taskId });
 
         return res.status(201).json({ taskHistoryId, historyText, historyDate });
     } catch (error) {
